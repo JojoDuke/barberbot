@@ -192,18 +192,32 @@ app.post('/whatsapp', async (req, res) => {
 
 // Status callback endpoint to track message delivery
 app.post('/whatsapp/status', (req, res) => {
-  const messageSid = req.body.MessageSid;
-  const messageStatus = req.body.MessageStatus;
+  console.log(`📊 Message Status Callback Received`);
+  console.log('───────────────────────────────────────');
+  console.log('Full callback data:');
+  console.log(JSON.stringify(req.body, null, 2));
+  console.log('───────────────────────────────────────');
+
+  // Extract common Twilio status fields
+  const messageSid = req.body.MessageSid || req.body.SmsSid;
+  const messageStatus = req.body.MessageStatus || req.body.SmsStatus;
   const errorCode = req.body.ErrorCode;
   const errorMessage = req.body.ErrorMessage;
+  const from = req.body.From;
+  const to = req.body.To;
+  const channelStatus = req.body.ChannelToStatus;
 
-  console.log(`📊 Message Status Update:`);
+  console.log(`\n📊 Parsed Status:`);
   console.log(`   SID: ${messageSid}`);
-  console.log(`   Status: ${messageStatus}`);
+  console.log(`   Status: ${messageStatus || channelStatus || 'unknown'}`);
+  console.log(`   From: ${from}`);
+  console.log(`   To: ${to}`);
   
   if (errorCode) {
     console.error(`   ❌ Error Code: ${errorCode}`);
     console.error(`   ❌ Error Message: ${errorMessage}`);
+  } else {
+    console.log(`   ✅ No errors`);
   }
 
   res.sendStatus(200);
