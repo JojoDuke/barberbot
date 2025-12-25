@@ -128,6 +128,10 @@ app.post('/whatsapp', async (req, res) => {
 
     // Call the agent with memory context (using phone number as resourceId)
     console.log('🔄 Calling Bridget...');
+    // Use phone number as threadId to ensure each user has their own conversation thread
+    const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
+    console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
+    
     const response = await agent.stream(
       [
         {
@@ -137,7 +141,7 @@ app.post('/whatsapp', async (req, res) => {
       ],
       {
         resourceId: senderNumber, // This enables conversation memory per user
-        threadId: 'booking-conversation', // Thread ID for booking conversations
+        threadId: threadId, // Unique thread ID per user (phone number)
       }
     );
 
