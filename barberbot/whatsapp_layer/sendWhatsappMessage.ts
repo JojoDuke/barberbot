@@ -23,6 +23,8 @@ function sanitizeWhatsAppMessage(message: string): string {
   let sanitized = message
     // Remove control characters except newlines and tabs
     .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    // Replace em dash and en dash with regular dash
+    .replace(/[\u2013\u2014]/g, '-') // Em dash (—) and en dash (–) to regular dash (-)
     // Convert markdown formatting to WhatsApp format
     .replace(/\*\*\*/g, '*') // Triple asterisks to single
     .replace(/\*\*/g, '*') // Double asterisks to single
