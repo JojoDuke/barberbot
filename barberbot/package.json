@@ -9,7 +9,8 @@
     "build": "mastra build",
     "start": "mastra start",
     "whatsapp": "tsx whatsapp_layer/sendWhatsappMessage.ts",
-    "whatsapp:watch": "tsx watch whatsapp_layer/sendWhatsappMessage.ts"
+    "whatsapp:watch": "tsx watch whatsapp_layer/sendWhatsappMessage.ts",
+    "test:sanitizer": "tsx whatsapp_layer/test-message-sanitizer.ts"
   },
   "keywords": [],
   "author": "",

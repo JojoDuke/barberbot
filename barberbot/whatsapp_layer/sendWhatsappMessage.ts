@@ -10,6 +10,50 @@ const app = express();
 // Middleware to parse Twilio's webhook data
 app.use(express.urlencoded({ extended: false }));
 
+// WhatsApp message length limit (Twilio recommends staying under 1600)
+const WHATSAPP_MESSAGE_LIMIT = 1600;
+
+// Function to sanitize message for WhatsApp
+function sanitizeWhatsAppMessage(message: string): string {
+  if (!message || message.trim().length === 0) {
+    return 'Sorry, I encountered an issue. Please try again.';
+  }
+
+  // Remove unsupported characters and fix formatting
+  let sanitized = message
+    // Remove control characters except newlines and tabs
+    .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    // Convert markdown formatting to WhatsApp format
+    .replace(/\*\*\*/g, '*') // Triple asterisks to single
+    .replace(/\*\*/g, '*') // Double asterisks to single
+    .replace(/_{2,}/g, '_') // Multiple underscores to single
+    .replace(/~~(.+?)~~/g, '$1') // Remove strikethrough
+    .replace(/`{3}[\s\S]*?`{3}/g, '') // Remove code blocks
+    .replace(/`([^`]+)`/g, '$1') // Remove inline code formatting
+    // Clean up markdown headers
+    .replace(/^#{1,6}\s+/gm, '') // Remove markdown headers
+    // Fix bullet points
+    .replace(/^[\-\+]\s+/gm, '• ') // Convert - or + to bullets
+    // Remove markdown links but keep text
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+    // Remove excess whitespace
+    .replace(/\n{3,}/g, '\n\n') // Max 2 newlines
+    .replace(/[ \t]{2,}/g, ' ') // Multiple spaces to single
+    .trim();
+
+  // Ensure message isn't empty after sanitization
+  if (sanitized.length === 0) {
+    return 'Sorry, I encountered an issue with the response format. Please try again.';
+  }
+
+  // Limit message length (WhatsApp via Twilio has limits)
+  if (sanitized.length > WHATSAPP_MESSAGE_LIMIT) {
+    sanitized = sanitized.substring(0, WHATSAPP_MESSAGE_LIMIT - 100) + '\n\n... (message truncated)';
+  }
+
+  return sanitized;
+}
+
 // Function to send typing indicator
 async function sendTypingIndicator(messageSid: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
@@ -53,7 +97,18 @@ app.post('/whatsapp', async (req, res) => {
     const senderNumber = req.body.From || '';
     const messageSid = req.body.MessageSid || '';
 
-    console.log(`📱 Message from ${senderNumber}: ${incomingMessage}`);
+    console.log(`📱 Incoming WhatsApp Message:`);
+    console.log(`   From: ${senderNumber}`);
+    console.log(`   SID: ${messageSid}`);
+    console.log(`   Body: ${incomingMessage}`);
+
+    // Validate incoming message
+    if (!incomingMessage.trim()) {
+      console.warn('⚠️  Empty message received');
+      twiml.message('Hi! Please send a message to get started.');
+      res.type('text/xml').send(twiml.toString());
+      return;
+    }
 
     // Send typing indicator immediately (non-blocking)
     if (messageSid) {
@@ -93,26 +148,93 @@ app.post('/whatsapp', async (req, res) => {
       fullResponse += chunk;
     }
 
-    console.log(`🤖 Bot response (length: ${fullResponse.length}): ${fullResponse}`);
+    console.log(`🤖 Bot response (length: ${fullResponse.length}):`);
+    console.log('───────────────────────────────────────');
+    console.log(fullResponse);
+    console.log('───────────────────────────────────────');
 
     // Check if response is empty
     if (!fullResponse || fullResponse.trim().length === 0) {
       throw new Error('Agent returned empty response. Check your OPENAI_API_KEY and logs above.');
     }
 
+    // Sanitize the response for WhatsApp
+    const sanitizedResponse = sanitizeWhatsAppMessage(fullResponse);
+    console.log(`✨ Sanitized response (length: ${sanitizedResponse.length}):`);
+    console.log('───────────────────────────────────────');
+    console.log(sanitizedResponse);
+    console.log('───────────────────────────────────────');
+
+    // Validate before sending
+    if (!sanitizedResponse || sanitizedResponse.trim().length === 0) {
+      throw new Error('Sanitized response is empty');
+    }
+
     // Send the response back via WhatsApp
-    twiml.message(fullResponse);
+    twiml.message(sanitizedResponse);
+    
+    console.log('✅ TwiML response prepared successfully');
   } catch (error) {
-    console.error('Error processing message:', error);
-    twiml.message('Sorry, I encountered an error. Please try again later.');
+    console.error('❌ Error processing message:');
+    console.error(error);
+    
+    const errorMessage = 'Sorry, I encountered an error. Please try again in a moment.';
+    twiml.message(errorMessage);
   }
 
-  res.type('text/xml').send(twiml.toString());
+  // Set proper headers and send response
+  res.type('text/xml');
+  const twimlString = twiml.toString();
+  console.log('📤 Sending TwiML response:');
+  console.log(twimlString);
+  res.send(twimlString);
+});
+
+// Status callback endpoint to track message delivery
+app.post('/whatsapp/status', (req, res) => {
+  const messageSid = req.body.MessageSid;
+  const messageStatus = req.body.MessageStatus;
+  const errorCode = req.body.ErrorCode;
+  const errorMessage = req.body.ErrorMessage;
+
+  console.log(`📊 Message Status Update:`);
+  console.log(`   SID: ${messageSid}`);
+  console.log(`   Status: ${messageStatus}`);
+  
+  if (errorCode) {
+    console.error(`   ❌ Error Code: ${errorCode}`);
+    console.error(`   ❌ Error Message: ${errorMessage}`);
+  }
+
+  res.sendStatus(200);
+});
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    service: 'Bridget WhatsApp Bot'
+  });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    service: 'Bridget WhatsApp Bot',
+    status: 'running',
+    endpoints: {
+      webhook: '/whatsapp',
+      status: '/whatsapp/status',
+      health: '/health'
+    }
+  });
 });
 
 app.listen(3000, () => {
   console.log('🚀 Express server listening on port 3000');
   console.log('📲 WhatsApp webhook ready at http://localhost:3000/whatsapp');
+  console.log('📊 Status callback ready at http://localhost:3000/whatsapp/status');
   console.log('🤖 Bridget AI Booking Bot is ready!');
   
   // Check if API keys are set
