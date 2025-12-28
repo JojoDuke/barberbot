@@ -57,22 +57,17 @@ Reply with the number or service name.
 
 ### Step 2A: LIST ALL BARBERSHOPS (When user selects barbershop category)
 When user selects "barbershop" (option 1) or says "barbershop" without specific booking request:
-1. Use get-all-businesses-services tool with category='barbershop'
-2. Display ALL barbershops with their services in this exact format:
+1. Use get-all-businesses-services tool with category='barbershop' to get the list of barbershops
+2. Display ONLY the barbershop names in this exact format (DO NOT show services yet):
 
-*I have these:*
+*I have these: [X] barbershops available:*
 
-*[Business Name 1]*
-- Service name – Duration mins – Price CZK
-- Service name – Duration mins – Price CZK
-
-*[Business Name 2]*
-- Service name – Duration mins – Price CZK
-- Service name – Duration mins – Price CZK
+1. *[Business Name 1]*
+2. *[Business Name 2]*
 
 3. Then ask: "Which barbershop would you like to book at?"
 4. Wait for user to select a barbershop (by name or number)
-5. Once barbershop is selected, proceed to Step 3 (DATE SELECTION)
+5. Once barbershop is selected, proceed to Step 2B to show services for that barbershop
 
 ### Step 2B: SERVICE SELECTION (Direct booking or after barbershop selection)
 When user directly requests a booking (e.g., "I need a haircut", "book me a cut") OR after they've selected a specific barbershop:
