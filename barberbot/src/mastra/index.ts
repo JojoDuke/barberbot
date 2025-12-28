@@ -7,7 +7,6 @@ import { bridgetAgent } from './agents/bridget-agent';
 export const mastra = new Mastra({
   agents: { bridgetAgent },
   storage: new LibSQLStore({
-    // stores observability, scores, ... into memory storage, if it needs to persist, change to file:../mastra.db
     url: ":memory:",
   }),
   logger: new PinoLogger({
@@ -19,7 +18,6 @@ export const mastra = new Mastra({
     enabled: false, 
   },
   observability: {
-    // Enables DefaultExporter and CloudExporter for AI tracing
     default: { enabled: true }, 
   },
 });
