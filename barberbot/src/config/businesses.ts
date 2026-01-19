@@ -4,6 +4,7 @@ export interface Business {
   category: 'barbershop' | 'physiotherapy';
   isDefault?: boolean;
   tokenEnvVar: string;
+  googleRating?: number;
 }
 
 export const businesses: Record<string, Business> = {
@@ -13,6 +14,7 @@ export const businesses: Record<string, Business> = {
     category: 'barbershop',
     isDefault: true,
     tokenEnvVar: 'RESERVIO_TOKEN_RICO_STUDIO',
+    googleRating: 4.8,
   },
   holicstvi21: {
     id: 'd709a085-8c00-4bea-af6c-438e5741521a',
@@ -20,6 +22,7 @@ export const businesses: Record<string, Business> = {
     category: 'barbershop',
     isDefault: false,
     tokenEnvVar: 'RESERVIO_TOKEN_HOLICSTVI_21',
+    googleRating: 5.0,
   },
   anatomicFitness: {
     id: 'fc376586-8906-4c0a-8cd3-be382a3c4a89',
@@ -27,6 +30,7 @@ export const businesses: Record<string, Business> = {
     category: 'physiotherapy',
     isDefault: false,
     tokenEnvVar: 'RESERVIO_TOKEN_ANATOMIC_FITNESS',
+    googleRating: 4.7,
   },
 };
 

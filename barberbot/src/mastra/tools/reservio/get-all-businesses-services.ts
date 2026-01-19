@@ -8,12 +8,14 @@ export const getAllBusinessesServicesTool = createTool({
   description: 'Get all businesses in a category with their services. Use this when user asks about barbershops or physiotherapy in general.',
   inputSchema: z.object({
     category: z.enum(['barbershop', 'physiotherapy']).describe('The business category'),
+    minRating: z.number().optional().describe('Minimum Google rating to filter businesses'),
   }),
   outputSchema: z.object({
     businesses: z.array(
       z.object({
         id: z.string(),
         name: z.string(),
+        googleRating: z.number().optional(),
         services: z.array(
           z.object({
             id: z.string(),
@@ -26,8 +28,14 @@ export const getAllBusinessesServicesTool = createTool({
     ),
   }),
   execute: async ({ context }) => {
-    const categoryBusinesses = getBusinessesByCategory(context.category);
-    
+    let categoryBusinesses = getBusinessesByCategory(context.category);
+
+    if (context.minRating) {
+      categoryBusinesses = categoryBusinesses.filter(
+        (b) => (b.googleRating ?? 0) >= context.minRating!
+      );
+    }
+
     const businessesWithServices = await Promise.all(
       categoryBusinesses.map(async (business) => {
         try {
@@ -42,6 +50,7 @@ export const getAllBusinessesServicesTool = createTool({
           return {
             id: business.id,
             name: business.name,
+            googleRating: business.googleRating,
             services,
           };
         } catch (error) {
@@ -49,6 +58,7 @@ export const getAllBusinessesServicesTool = createTool({
           return {
             id: business.id,
             name: business.name,
+            googleRating: business.googleRating,
             services: [],
           };
         }

@@ -17,10 +17,12 @@ export const getBusinessInfoTool = createTool({
     phone: z.string(),
     timezone: z.string(),
     websiteUrl: z.string().optional(),
+    googleRating: z.number().optional(),
   }),
   execute: async ({ context }) => {
     const response: any = await reservioClient.getBusiness(context.businessId);
     const business = response.data;
+    const configBusiness = getBusinessById(context.businessId);
 
     return {
       name: business.attributes.name,
@@ -30,6 +32,7 @@ export const getBusinessInfoTool = createTool({
       phone: business.attributes.phone || '',
       timezone: business.attributes.settings.timezone,
       websiteUrl: business.attributes.websiteUrl || undefined,
+      googleRating: configBusiness?.googleRating,
     };
   },
 });
