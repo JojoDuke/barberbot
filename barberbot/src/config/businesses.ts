@@ -16,7 +16,7 @@ export const businesses: Record<string, Business> = {
     isDefault: true,
     tokenEnvVar: 'RESERVIO_TOKEN_RICO_STUDIO',
     googleRating: 4.8,
-    imageUrl: '/images/rico_studio.png',
+    imageUrl: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=800&q=80',
   },
   holicstvi21: {
     id: 'd709a085-8c00-4bea-af6c-438e5741521a',
@@ -25,7 +25,7 @@ export const businesses: Record<string, Business> = {
     isDefault: false,
     tokenEnvVar: 'RESERVIO_TOKEN_HOLICSTVI_21',
     googleRating: 5.0,
-    imageUrl: '/images/holicstvi_21.png',
+    imageUrl: 'https://images.unsplash.com/photo-1503951914875-452162b7f30a?auto=format&fit=crop&w=800&q=80',
   },
   anatomicFitness: {
     id: 'fc376586-8906-4c0a-8cd3-be382a3c4a89',
@@ -34,7 +34,7 @@ export const businesses: Record<string, Business> = {
     isDefault: false,
     tokenEnvVar: 'RESERVIO_TOKEN_ANATOMIC_FITNESS',
     googleRating: 4.7,
-    imageUrl: '/images/anatomic_fitness.png',
+    imageUrl: 'https://images.unsplash.com/photo-1570172619643-c8fd5976536d?auto=format&fit=crop&w=800&q=80',
   },
 };
 

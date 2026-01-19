@@ -19,18 +19,7 @@ const WHATSAPP_MESSAGE_LIMIT = 1600;
 // You should set BASE_URL in .env to your ngrok URL (e.g. https://xxxx.ngrok.io)
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
-// Serve images with explicit options to ensure correct headers
-app.use('/images', express.static(path.join(process.cwd(), 'public/images'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.png')) {
-      res.setHeader('Content-Type', 'image/png');
-    } else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
-      res.setHeader('Content-Type', 'image/jpeg');
-    }
-    // Allow Twilio bot to fetch
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
-}));
+app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
 
 // Function to sanitize message for WhatsApp
 function sanitizeWhatsAppMessage(message: string): string {
@@ -244,30 +233,13 @@ app.post('/whatsapp', async (req, res) => {
     if (imageMatch && imageMatch[1]) {
       let imageUrl = imageMatch[1].trim();
 
-      // If it's a relative path, construct the full URL
+      // If it's a relative path, assume simple local serving (though we are moving to external now)
       if (imageUrl.startsWith('/')) {
-        // Remove leading slash from image path if BASE_URL has trailing slash, or handle cleanly
-        const cleanBase = BASE_URL.replace(/\/$/, '');
-        const cleanPath = imageUrl.replace(/^\//, '');
-        const fullUrl = `${cleanBase}/${cleanPath}`;
-
-        // Verify file exists locally before sending (prevents Twilio 63019 error on missing files)
-        const relativePath = imageUrl.replace(/^\/images\//, '');
-        const localFilePath = path.join(process.cwd(), 'public', 'images', relativePath);
-
-        if (fs.existsSync(localFilePath)) {
-          console.log(`🖼️  Attaching image: ${fullUrl}`);
-          console.log(`    (Verified local file exists: ${localFilePath})`);
-          message.media(fullUrl);
-        } else {
-          console.warn(`⚠️  Image NOT found locally: ${localFilePath}`);
-          console.warn(`    Skipping media attachment to prevent Twilio error.`);
-        }
-      } else {
-        // Absolute URL (external) - just send it
-        console.log(`🖼️  Attaching external image: ${imageUrl}`);
-        message.media(imageUrl);
+        imageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
       }
+
+      console.log(`🖼️  Attaching image: ${imageUrl}`);
+      message.media(imageUrl);
     }
 
     console.log('✅ TwiML response prepared successfully');
