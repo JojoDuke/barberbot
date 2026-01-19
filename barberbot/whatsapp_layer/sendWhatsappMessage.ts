@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import path from 'path';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { mastra } from '../src/mastra/index.js';
 
@@ -12,6 +13,12 @@ app.use(express.urlencoded({ extended: false }));
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
+
+// Host URL for serving images (defaults to ngrok/tunnel URL if available, else localhost)
+// You should set BASE_URL in .env to your ngrok URL (e.g. https://xxxx.ngrok.io)
+const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
+
+app.use('/images', express.static(path.join(process.cwd(), 'public/images')));
 
 // Function to sanitize message for WhatsApp
 function sanitizeWhatsAppMessage(message: string): string {
@@ -38,6 +45,8 @@ function sanitizeWhatsAppMessage(message: string): string {
     .replace(/^[\-\+]\s+/gm, '• ') // Convert - or + to bullets
     // Remove markdown links but keep text
     .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1')
+    // Remove image tags [IMAGE: ...] as they are handled separately
+    .replace(/\[IMAGE:.*?\]/g, '')
     // Remove excess whitespace
     .replace(/\n{3,}/g, '\n\n') // Max 2 newlines
     .replace(/[ \t]{2,}/g, ' ') // Multiple spaces to single
@@ -131,7 +140,7 @@ app.post('/whatsapp', async (req, res) => {
     // Use phone number as threadId to ensure each user has their own conversation thread
     const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
     console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
-    
+
     // Retry logic with timeout
     const MAX_RETRIES = 2;
     const TIMEOUT_MS = 30000; // 30 seconds timeout
@@ -167,7 +176,7 @@ app.post('/whatsapp', async (req, res) => {
         const response = await Promise.race([agentPromise, timeoutPromise]);
 
         console.log('📡 Streaming response...');
-        
+
         // Accumulate the streamed response
         fullResponse = '';
         for await (const chunk of response.textStream) {
@@ -180,7 +189,7 @@ app.post('/whatsapp', async (req, res) => {
       } catch (error) {
         lastError = error as Error;
         console.error(`❌ Attempt ${attempt + 1} failed:`, error);
-        
+
         if (attempt < MAX_RETRIES) {
           // Wait a bit before retrying (exponential backoff)
           await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
@@ -215,13 +224,26 @@ app.post('/whatsapp', async (req, res) => {
     }
 
     // Send the response back via WhatsApp
-    twiml.message(sanitizedResponse);
-    
+    const message = twiml.message('');
+    message.body(sanitizedResponse);
+
+    // Extract image URL if present in original response
+    const imageMatch = fullResponse.match(/\[IMAGE:\s*(.*?)\]/);
+    if (imageMatch && imageMatch[1]) {
+      let imageUrl = imageMatch[1].trim();
+      // If valid URL (starts with http), use it. otherwise assume relative path and prepend base url
+      if (imageUrl.startsWith('/')) {
+        imageUrl = `${BASE_URL}${imageUrl}`;
+      }
+      console.log(`🖼️ Attaching image: ${imageUrl}`);
+      message.media(imageUrl);
+    }
+
     console.log('✅ TwiML response prepared successfully');
   } catch (error) {
     console.error('❌ Error processing message:');
     console.error(error);
-    
+
     const errorMessage = 'Sorry, I encountered an error. Please try again in a moment.';
     twiml.message(errorMessage);
   }
@@ -256,7 +278,7 @@ app.post('/whatsapp/status', (req, res) => {
   console.log(`   Status: ${messageStatus || channelStatus || 'unknown'}`);
   console.log(`   From: ${from}`);
   console.log(`   To: ${to}`);
-  
+
   if (errorCode) {
     console.error(`   ❌ Error Code: ${errorCode}`);
     console.error(`   ❌ Error Message: ${errorMessage}`);
@@ -269,8 +291,8 @@ app.post('/whatsapp/status', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'Bridget WhatsApp Bot'
   });
@@ -294,7 +316,7 @@ app.listen(3000, () => {
   console.log('📲 WhatsApp webhook ready at http://localhost:3000/whatsapp');
   console.log('📊 Status callback ready at http://localhost:3000/whatsapp/status');
   console.log('🤖 Bridget AI Booking Bot is ready!');
-  
+
   // Check if API keys are set
   const hasOpenAiKey = !!process.env.OPENAI_API_KEY;
   const hasRicoToken = !!process.env.RESERVIO_TOKEN_RICO_STUDIO;
@@ -302,14 +324,14 @@ app.listen(3000, () => {
   const hasAnatomicToken = !!process.env.RESERVIO_TOKEN_ANATOMIC_FITNESS;
   const hasTwilioSid = !!process.env.TWILIO_ACCOUNT_SID;
   const hasTwilioToken = !!process.env.TWILIO_AUTH_TOKEN;
-  
+
   console.log(`🔑 OpenAI API Key: ${hasOpenAiKey ? '✅ Set' : '❌ NOT SET'}`);
   console.log(`🔑 Rico Studio Token: ${hasRicoToken ? '✅ Set' : '❌ NOT SET'}`);
   console.log(`🔑 Holičství 21 Token: ${hasHolicToken ? '✅ Set' : '❌ NOT SET'}`);
   console.log(`🔑 Anatomic Fitness Token: ${hasAnatomicToken ? '✅ Set' : '❌ NOT SET'}`);
   console.log(`🔑 Twilio Account SID: ${hasTwilioSid ? '✅ Set' : '⚠️  NOT SET (typing indicators disabled)'}`);
   console.log(`🔑 Twilio Auth Token: ${hasTwilioToken ? '✅ Set' : '⚠️  NOT SET (typing indicators disabled)'}`);
-  
+
   if (!hasOpenAiKey || !hasRicoToken || !hasHolicToken || !hasAnatomicToken) {
     console.log('\n⚠️  WARNING: Missing required environment variables!');
     console.log('   Please add the following to your .env file:');
@@ -318,7 +340,7 @@ app.listen(3000, () => {
     if (!hasHolicToken) console.log('   - RESERVIO_TOKEN_HOLICSTVI_21=your-token');
     if (!hasAnatomicToken) console.log('   - RESERVIO_TOKEN_ANATOMIC_FITNESS=your-token');
   }
-  
+
   if (!hasTwilioSid || !hasTwilioToken) {
     console.log('\n💡 OPTIONAL: Add Twilio credentials for typing indicators:');
     console.log('   - TWILIO_ACCOUNT_SID=your-account-sid');

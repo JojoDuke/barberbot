@@ -16,6 +16,7 @@ export const getAllBusinessesServicesTool = createTool({
         id: z.string(),
         name: z.string(),
         googleRating: z.number().optional(),
+        imageUrl: z.string().optional(),
         services: z.array(
           z.object({
             id: z.string(),
@@ -51,6 +52,7 @@ export const getAllBusinessesServicesTool = createTool({
             id: business.id,
             name: business.name,
             googleRating: business.googleRating,
+            imageUrl: business.imageUrl,
             services,
           };
         } catch (error) {

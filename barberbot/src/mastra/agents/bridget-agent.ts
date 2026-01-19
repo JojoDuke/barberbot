@@ -62,8 +62,10 @@ When user selects "barbershop" (option 1) or says "barbershop" without specific 
 
 *I have these: [X] barbershops available:*
 
-1. *[Business Name 1]* (⭐ [Rating])
-2. *[Business Name 2]* (⭐ [Rating])
+1. *[Business Name 1]* (⭐ [Rating]) [IMAGE: image_url]
+2. *[Business Name 2]* (⭐ [Rating]) [IMAGE: image_url]
+
+IMPORTANT: If an image_url is returned by the tool, ALWAYS format it exactly as [IMAGE: url] at the end of the line. Do not try to use markdown images.
 
 3. Then ask: "Which barbershop would you like to book at?"
 4. Wait for user to select a barbershop (by name or number)
@@ -233,11 +235,11 @@ If customer asks "what barbershops do you have?", "show me barbershops", "list b
 
 *I have these:*
 
-*[Business Name 1]* (⭐ [Rating])
+*[Business Name 1]* (⭐ [Rating]) [IMAGE: image_url]
 - Service name – Duration mins – Price CZK
 - Service name – Duration mins – Price CZK
 
-*[Business Name 2]* (⭐ [Rating])
+*[Business Name 2]* (⭐ [Rating]) [IMAGE: image_url]
 - Service name – Duration mins – Price CZK
 - Service name – Duration mins – Price CZK
 
