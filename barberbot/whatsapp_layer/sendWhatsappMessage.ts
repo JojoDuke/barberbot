@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
+import twilio from 'twilio';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { mastra } from '../src/mastra/index.js';
 
@@ -11,6 +12,9 @@ const app = express();
 
 // Middleware to parse Twilio's webhook data
 app.use(express.urlencoded({ extended: false }));
+
+// Initialize Twilio client
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
@@ -97,6 +101,24 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
   } catch (error) {
     console.warn('⚠️  Failed to send typing indicator:', error);
     // Don't throw - typing indicator is not critical
+  }
+}
+
+// Helper to delay execution
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper to send WhatsApp message via REST API
+async function sendWhatsAppMessageRest(to: string, from: string, body: string, mediaUrl?: string) {
+  try {
+    await client.messages.create({
+      to,
+      from,
+      body,
+      mediaUrl: mediaUrl ? [mediaUrl] : undefined,
+    });
+    console.log(`📤 Message sent via REST API to ${to}`);
+  } catch (error) {
+    console.error(`❌ Failed to send REST API message to ${to}:`, error);
   }
 }
 
@@ -230,7 +252,7 @@ app.post('/whatsapp', async (req, res) => {
 
     if (splitMatches.length > 0) {
       // Multiple messages mode - send each SPLIT_MESSAGE block as a separate message
-      console.log(`📨 Detected ${splitMatches.length} split messages`);
+      console.log(`📨 Detected ${splitMatches.length} split messages - switching to REST API for sequencing`);
 
       // First, send any content before the first SPLIT_MESSAGE block
       const firstSplitIndex = fullResponse.indexOf('[SPLIT_MESSAGE]');
@@ -239,14 +261,15 @@ app.post('/whatsapp', async (req, res) => {
         if (introText) {
           const sanitizedIntro = sanitizeWhatsAppMessage(introText);
           if (sanitizedIntro) {
-            twiml.message(sanitizedIntro);
-            console.log(`📤 Sent intro message: ${sanitizedIntro}`);
+            await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedIntro);
+            await sleep(1000); // 1 second delay
           }
         }
       }
 
       // Send each SPLIT_MESSAGE block as a separate message
-      for (const match of splitMatches) {
+      for (let i = 0; i < splitMatches.length; i++) {
+        const match = splitMatches[i];
         const blockContent = match[1].trim();
 
         // Extract image URL from this block
@@ -258,22 +281,30 @@ app.post('/whatsapp', async (req, res) => {
 
         if (textContent) {
           const sanitizedBlock = sanitizeWhatsAppMessage(textContent);
-          const message = twiml.message('');
-          message.body(sanitizedBlock);
 
-          // Attach image if present
+          let finalImageUrl: string | undefined = undefined;
           if (imageUrl) {
-            let finalImageUrl = imageUrl;
+            finalImageUrl = imageUrl;
             if (imageUrl.startsWith('/')) {
               finalImageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
             }
-            console.log(`🖼️  Attaching image to split message: ${finalImageUrl}`);
-            message.media(finalImageUrl);
           }
 
-          console.log(`📤 Sent split message: ${sanitizedBlock.substring(0, 50)}...`);
+          console.log(`📤 Sending split message ${i + 1}/${splitMatches.length} via REST API...`);
+          await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedBlock, finalImageUrl);
+
+          // Delay between messages
+          // If it's the second to last message, add a longer delay for the final question
+          if (i < splitMatches.length - 1) {
+            const delay = i === splitMatches.length - 2 ? 4000 : 2500;
+            console.log(`- Waiting ${delay}ms before next message...`);
+            await sleep(delay);
+          }
         }
       }
+
+      // We respond with empty TwiML since we sent everything via REST API
+      console.log('✅ All split messages queued via REST API');
     } else {
       // Single message mode (original behavior)
       const message = twiml.message('');
