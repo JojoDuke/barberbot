@@ -224,22 +224,74 @@ app.post('/whatsapp', async (req, res) => {
       throw new Error('Sanitized response is empty');
     }
 
-    // Send the response back via WhatsApp
-    const message = twiml.message('');
-    message.body(sanitizedResponse);
+    // Check if response contains SPLIT_MESSAGE blocks
+    const splitMessageRegex = /\[SPLIT_MESSAGE\]([\s\S]*?)\[\/SPLIT_MESSAGE\]/g;
+    const splitMatches = Array.from(fullResponse.matchAll(splitMessageRegex));
 
-    // Extract image URL if present in original response
-    const imageMatch = fullResponse.match(/\[IMAGE:\s*(.*?)\]/);
-    if (imageMatch && imageMatch[1]) {
-      let imageUrl = imageMatch[1].trim();
+    if (splitMatches.length > 0) {
+      // Multiple messages mode - send each SPLIT_MESSAGE block as a separate message
+      console.log(`📨 Detected ${splitMatches.length} split messages`);
 
-      // If it's a relative path, assume simple local serving (though we are moving to external now)
-      if (imageUrl.startsWith('/')) {
-        imageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+      // First, send any content before the first SPLIT_MESSAGE block
+      const firstSplitIndex = fullResponse.indexOf('[SPLIT_MESSAGE]');
+      if (firstSplitIndex > 0) {
+        const introText = fullResponse.substring(0, firstSplitIndex).trim();
+        if (introText) {
+          const sanitizedIntro = sanitizeWhatsAppMessage(introText);
+          if (sanitizedIntro) {
+            twiml.message(sanitizedIntro);
+            console.log(`📤 Sent intro message: ${sanitizedIntro}`);
+          }
+        }
       }
 
-      console.log(`🖼️  Attaching image: ${imageUrl}`);
-      message.media(imageUrl);
+      // Send each SPLIT_MESSAGE block as a separate message
+      for (const match of splitMatches) {
+        const blockContent = match[1].trim();
+
+        // Extract image URL from this block
+        const imageMatch = blockContent.match(/\[IMAGE:\s*(.*?)\]/);
+        const imageUrl = imageMatch ? imageMatch[1].trim() : null;
+
+        // Remove IMAGE tag from text
+        const textContent = blockContent.replace(/\[IMAGE:.*?\]/g, '').trim();
+
+        if (textContent) {
+          const sanitizedBlock = sanitizeWhatsAppMessage(textContent);
+          const message = twiml.message('');
+          message.body(sanitizedBlock);
+
+          // Attach image if present
+          if (imageUrl) {
+            let finalImageUrl = imageUrl;
+            if (imageUrl.startsWith('/')) {
+              finalImageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+            }
+            console.log(`🖼️  Attaching image to split message: ${finalImageUrl}`);
+            message.media(finalImageUrl);
+          }
+
+          console.log(`📤 Sent split message: ${sanitizedBlock.substring(0, 50)}...`);
+        }
+      }
+    } else {
+      // Single message mode (original behavior)
+      const message = twiml.message('');
+      message.body(sanitizedResponse);
+
+      // Extract image URL if present in original response
+      const imageMatch = fullResponse.match(/\[IMAGE:\s*(.*?)\]/);
+      if (imageMatch && imageMatch[1]) {
+        let imageUrl = imageMatch[1].trim();
+
+        // If it's a relative path, assume simple local serving (though we are moving to external now)
+        if (imageUrl.startsWith('/')) {
+          imageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+        }
+
+        console.log(`🖼️  Attaching image: ${imageUrl}`);
+        message.media(imageUrl);
+      }
     }
 
     console.log('✅ TwiML response prepared successfully');
