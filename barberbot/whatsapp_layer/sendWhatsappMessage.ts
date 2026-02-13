@@ -136,6 +136,40 @@ app.post('/whatsapp', async (req, res) => {
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
 
+    // Command Trigger: !x74
+    if (incomingMessage.trim() === '!x74') {
+      console.log('🎯 Command Triggered: !x74');
+
+      // Send interactive buttons via REST API
+      try {
+        await client.messages.create({
+          from: req.body.To, // Your Twilio WhatsApp number
+          to: senderNumber,
+          body: 'Send Broadcast?',
+          // Using Twilio's interactive message format for WhatsApp
+          // Note: This requires the 'contentSid' if using templates, 
+          // but for simple session-based buttons we can use the 'persistentAction' or 'contentVariables'
+          // However, for standard WhatsApp Buttons in 2024/2025, Twilio recommends Content API.
+          // For a quick implementation without pre-registered templates, we use standard text buttons if supported by the user's Twilio setup.
+          // Alternatively, we can use a simpler approach for now to ensure it works.
+          persistentAction: [
+            `button|Yes|Yes`,
+            `button|No|No`
+          ] as any // Twilio type might need casting depending on library version
+        });
+
+        console.log('✅ Interactive buttons sent for !x74');
+        res.type('text/xml').send('<Response></Response>'); // Empty TwiML
+        return;
+      } catch (err) {
+        console.error('❌ Failed to send buttons:', err);
+        // Fallback to plain text if buttons fail
+        twiml.message('Send Broadcast?\n\n1. Yes\n2. No');
+        res.type('text/xml').send(twiml.toString());
+        return;
+      }
+    }
+
     // Validate incoming message
     if (!incomingMessage.trim()) {
       console.warn('⚠️  Empty message received');
