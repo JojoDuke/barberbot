@@ -2,9 +2,11 @@ import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import twilio from 'twilio';
-import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { mastra } from '../src/mastra/index.js';
+import { twilioClient, sendWhatsAppMessage } from '../src/lib/twilio.js';
+import { supabase } from '../src/lib/supabase.js';
+import twilio from 'twilio';
+const { MessagingResponse } = twilio.twiml;
 
 dotenv.config();
 
@@ -12,9 +14,6 @@ const app = express();
 
 // Middleware to parse Twilio's webhook data
 app.use(express.urlencoded({ extended: false }));
-
-// Initialize Twilio client
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
@@ -110,7 +109,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Helper to send WhatsApp message via REST API
 async function sendWhatsAppMessageRest(to: string, from: string, body: string, mediaUrl?: string) {
   try {
-    await client.messages.create({
+    await twilioClient.messages.create({
       to,
       from,
       body,
@@ -129,12 +128,24 @@ app.post('/whatsapp', async (req, res) => {
     // Extract incoming message and sender info
     const incomingMessage = req.body.Body || '';
     const senderNumber = req.body.From || '';
+    const senderName = req.body.ProfileName || 'Unknown';
     const messageSid = req.body.MessageSid || '';
 
     console.log(`📱 Incoming WhatsApp Message:`);
-    console.log(`   From: ${senderNumber}`);
+    console.log(`   From: ${senderNumber} (${senderName})`);
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
+
+    // Track user in database
+    try {
+      await supabase.from('users').upsert({
+        phone_number: senderNumber,
+        name: senderName,
+        last_active: new Date().toISOString()
+      }, { onConflict: 'phone_number' });
+    } catch (dbError) {
+      console.warn('⚠️ Failed to save user to database:', dbError);
+    }
 
     // Validate incoming message
     if (!incomingMessage.trim()) {

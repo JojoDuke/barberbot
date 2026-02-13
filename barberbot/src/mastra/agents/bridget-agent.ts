@@ -6,6 +6,7 @@ import { getServicesTool } from '../tools/reservio/get-services';
 import { getAvailabilityTool } from '../tools/reservio/get-availability';
 import { createBookingTool } from '../tools/reservio/create-booking';
 import { getAllBusinessesServicesTool } from '../tools/reservio/get-all-businesses-services';
+import { sendBroadcastTool } from '../tools/admin/broadcast';
 import { businesses, getBusinessesByCategory, getDefaultBusiness } from '../../config/businesses';
 
 export const bridgetAgent = new Agent({
@@ -276,6 +277,14 @@ If customer asks about hours, location, or services for a specific business:
 - Use get-services tool to list all services (with prices)
 - Then ask: "Would you like to book an appointment?"
 
+### ADMIN COMMANDS (Broadcast):
+If the user says "Send Broadcast" or similar:
+1. Detect that this is a broadcast request.
+2. Ask the user: "What message would you like to broadcast to all customers?"
+3. Once they provide the message, summarize it and ask for confirmation: "Ready to send '[Message]' to all users. Should I proceed?"
+4. If they say 'yes', use the send-broadcast tool with the provided message.
+5. Report the result: "✅ Broadcast sent to [count] users."
+
 Remember: Be helpful, conversational, and guide customers smoothly through booking!
 `,
   model: 'openai/gpt-5.2-chat-latest',
@@ -285,6 +294,7 @@ Remember: Be helpful, conversational, and guide customers smoothly through booki
     getAvailability: getAvailabilityTool,
     createBooking: createBookingTool,
     getAllBusinessesServices: getAllBusinessesServicesTool,
+    sendBroadcast: sendBroadcastTool,
   },
   memory: new Memory({
     storage: new LibSQLStore({

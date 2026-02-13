@@ -1,3 +1,5 @@
+import { supabase } from '../lib/supabase';
+
 export interface Business {
   id: string;
   name: string;
@@ -10,7 +12,7 @@ export interface Business {
   instagram?: string;
 }
 
-export const businesses: Record<string, Business> = {
+export const staticBusinesses: Record<string, Business> = {
   ricoStudio: {
     id: 'ef525423-dabf-4750-bf11-dc5182d68695',
     name: 'Rico Studio',
@@ -46,16 +48,47 @@ export const businesses: Record<string, Business> = {
   },
 };
 
-export const getBusinessesByCategory = (category: 'barbershop' | 'physiotherapy'): Business[] => {
-  return Object.values(businesses).filter(b => b.category === category);
+// Backwards compatibility
+export const businesses = staticBusinesses;
+
+export const getAllBusinesses = async (): Promise<Business[]> => {
+  try {
+    const { data, error } = await supabase.from('businesses').select('*');
+
+    if (error || !data || data.length === 0) {
+      console.warn('⚠️ Could not fetch businesses from Supabase, using static fallback');
+      return Object.values(staticBusinesses);
+    }
+
+    return data.map(b => ({
+      id: b.id,
+      name: b.name,
+      category: b.category,
+      isDefault: b.is_default,
+      tokenEnvVar: b.token_env_var,
+      googleRating: b.google_rating,
+      imageUrl: b.image_url,
+      website: b.website,
+      instagram: b.instagram,
+    }));
+  } catch (err) {
+    return Object.values(staticBusinesses);
+  }
 };
 
-export const getDefaultBusiness = (category: 'barbershop' | 'physiotherapy'): Business => {
-  const categoryBusinesses = getBusinessesByCategory(category);
+export const getBusinessesByCategory = async (category: 'barbershop' | 'physiotherapy'): Promise<Business[]> => {
+  const all = await getAllBusinesses();
+  return all.filter(b => b.category === category);
+};
+
+export const getDefaultBusiness = async (category: 'barbershop' | 'physiotherapy'): Promise<Business> => {
+  const categoryBusinesses = await getBusinessesByCategory(category);
   return categoryBusinesses.find(b => b.isDefault) || categoryBusinesses[0];
 };
 
-export const getBusinessById = (id: string): Business | undefined => {
-  return Object.values(businesses).find(b => b.id === id);
+export const getBusinessById = async (id: string): Promise<Business | undefined> => {
+  const all = await getAllBusinesses();
+  return all.find(b => b.id === id);
 };
+
 
