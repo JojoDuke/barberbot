@@ -408,10 +408,12 @@ app.get('/', (req, res) => {
   });
 });
 
-app.listen(3000, () => {
-  console.log('🚀 Express server listening on port 3000');
-  console.log('📲 WhatsApp webhook ready at http://localhost:3000/whatsapp');
-  console.log('📊 Status callback ready at http://localhost:3000/whatsapp/status');
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Express server listening on port ${PORT}`);
+  console.log(`📲 WhatsApp webhook ready at /whatsapp`);
+  console.log(`📊 Status callback ready at /whatsapp/status`);
   console.log('🤖 Bridget AI Booking Bot is ready!');
 
   // Check if API keys are set
