@@ -10,7 +10,7 @@ export const mastra = new Mastra({
     url: ":memory:",
   }),
   bundler: {
-    externals: ["supports-color"],
+    externals: ["supports-color", "twilio"],
   },
   logger: new PinoLogger({
     name: 'Mastra',
