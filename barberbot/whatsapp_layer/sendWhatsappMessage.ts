@@ -395,9 +395,9 @@ app.get('/', (req, res) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Express server listening on port ${PORT}`);
   console.log(`📲 WhatsApp webhook ready at /whatsapp`);
   console.log(`📊 Status callback ready at /whatsapp/status`);
