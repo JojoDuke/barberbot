@@ -3,9 +3,10 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { mastra } from '../src/mastra/index.js';
-import { supabase } from '../src/lib/supabase.js';
 import { twilioClient } from '../src/lib/twilio.js';
+import { supabase } from '../src/lib/supabase.js';
 import twilio from 'twilio';
+const { MessagingResponse } = twilio.twiml;
 
 dotenv.config();
 
@@ -13,8 +14,7 @@ const app = express();
 
 // Middleware to parse Twilio's webhook data
 app.use(express.urlencoded({ extended: false }));
-// MessagingResponse from twilio
-const { MessagingResponse } = twilio.twiml;
+
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
