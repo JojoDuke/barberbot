@@ -16,7 +16,8 @@ export const getBusinessInfoTool = createTool({
     country: z.string(),
     phone: z.string(),
     timezone: z.string(),
-    websiteUrl: z.string().optional(),
+    website: z.string().optional(),
+    instagram: z.string().optional(),
     googleRating: z.number().optional(),
   }),
   execute: async ({ context }) => {
@@ -31,7 +32,8 @@ export const getBusinessInfoTool = createTool({
       country: business.attributes.country || '',
       phone: business.attributes.phone || '',
       timezone: business.attributes.settings.timezone,
-      websiteUrl: business.attributes.websiteUrl || undefined,
+      website: configBusiness?.website,
+      instagram: configBusiness?.instagram,
       googleRating: configBusiness?.googleRating,
     };
   },

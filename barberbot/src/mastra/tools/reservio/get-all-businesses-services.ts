@@ -15,6 +15,9 @@ export const getAllBusinessesServicesTool = createTool({
       z.object({
         id: z.string(),
         name: z.string(),
+        address: z.string().optional(),
+        website: z.string().optional(),
+        instagram: z.string().optional(),
         googleRating: z.number().optional(),
         imageUrl: z.string().optional(),
         services: z.array(
@@ -40,26 +43,38 @@ export const getAllBusinessesServicesTool = createTool({
     const businessesWithServices = await Promise.all(
       categoryBusinesses.map(async (business) => {
         try {
-          const response: any = await reservioClient.getServices(business.id);
-          const services = response.data.map((service: any) => ({
+          const [servicesResponse, businessResponse]: [any, any] = await Promise.all([
+            reservioClient.getServices(business.id),
+            reservioClient.getBusiness(business.id),
+          ]);
+
+          const services = servicesResponse.data.map((service: any) => ({
             id: service.id,
             name: service.attributes.name,
             durationMinutes: Math.round(service.attributes.duration / 60),
             cost: service.attributes.cost,
           }));
 
+          const address = businessResponse.data.attributes.street || '';
+
           return {
             id: business.id,
             name: business.name,
+            address,
+            website: business.website,
+            instagram: business.instagram,
             googleRating: business.googleRating,
             imageUrl: business.imageUrl,
             services,
           };
         } catch (error) {
-          console.error(`Error fetching services for ${business.name}:`, error);
+          console.error(`Error fetching data for ${business.name}:`, error);
           return {
             id: business.id,
             name: business.name,
+            address: '',
+            website: business.website,
+            instagram: business.instagram,
             googleRating: business.googleRating,
             services: [],
           };

@@ -66,7 +66,9 @@ First, send an intro message:
 Then for EACH business, format it like this (each will be sent as a separate WhatsApp message):
 [SPLIT_MESSAGE]
 *[Business Name]* (⭐ [Rating])
-[IMAGE: image_url]
+[Address]
+[Website]
+[Instagram]
 [/SPLIT_MESSAGE]
 
 After all businesses, send a final message:
@@ -76,7 +78,7 @@ After all businesses, send a final message:
 
 CRITICAL: 
 - Each [SPLIT_MESSAGE]...[/SPLIT_MESSAGE] block will be sent as a SEPARATE WhatsApp message
-- ALWAYS include the [IMAGE: url] tag inside the SPLIT_MESSAGE block for each business
+- DO NOT include any images or image tags
 - Do NOT put multiple businesses in one SPLIT_MESSAGE block
 
 3. Wait for user to select a barbershop (by name or number)
@@ -254,7 +256,9 @@ First, send an intro message:
 Then for EACH business, format it like this (each will be sent as a separate WhatsApp message):
 [SPLIT_MESSAGE]
 *[Business Name]* (⭐ [Rating])
-[IMAGE: image_url]
+[Address]
+[Website]
+[Instagram]
 
 Services:
 - Service name – Duration mins – Price CZK
