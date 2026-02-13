@@ -2,10 +2,9 @@ import dotenv from 'dotenv';
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { mastra } from '../src/mastra/index.js';
-import { twilioClient } from '../src/lib/twilio.js';
 import twilio from 'twilio';
-const { MessagingResponse } = twilio.twiml;
+import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
+import { mastra } from '../src/mastra/index.js';
 
 dotenv.config();
 
@@ -14,6 +13,8 @@ const app = express();
 // Middleware to parse Twilio's webhook data
 app.use(express.urlencoded({ extended: false }));
 
+// Initialize Twilio client
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
@@ -109,7 +110,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Helper to send WhatsApp message via REST API
 async function sendWhatsAppMessageRest(to: string, from: string, body: string, mediaUrl?: string) {
   try {
-    await twilioClient.messages.create({
+    await client.messages.create({
       to,
       from,
       body,
@@ -125,6 +126,7 @@ app.post('/whatsapp', async (req, res) => {
   const twiml = new MessagingResponse();
 
   try {
+    // Extract incoming message and sender info
     const incomingMessage = req.body.Body || '';
     const senderNumber = req.body.From || '';
     const messageSid = req.body.MessageSid || '';
@@ -395,12 +397,10 @@ app.get('/', (req, res) => {
   });
 });
 
-const PORT = Number(process.env.PORT) || 3000;
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Express server listening on port ${PORT}`);
-  console.log(`📲 WhatsApp webhook ready at /whatsapp`);
-  console.log(`📊 Status callback ready at /whatsapp/status`);
+app.listen(3000, () => {
+  console.log('🚀 Express server listening on port 3000');
+  console.log('📲 WhatsApp webhook ready at http://localhost:3000/whatsapp');
+  console.log('📊 Status callback ready at http://localhost:3000/whatsapp/status');
   console.log('🤖 Bridget AI Booking Bot is ready!');
 
   // Check if API keys are set

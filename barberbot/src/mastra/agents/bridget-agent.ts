@@ -288,7 +288,7 @@ Remember: Be helpful, conversational, and guide customers smoothly through booki
   },
   memory: new Memory({
     storage: new LibSQLStore({
-      url: ':memory:',
+      url: 'file:../mastra.db',
     }),
   }),
 });

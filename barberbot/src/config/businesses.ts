@@ -59,4 +59,3 @@ export const getBusinessById = (id: string): Business | undefined => {
   return Object.values(businesses).find(b => b.id === id);
 };
 
-

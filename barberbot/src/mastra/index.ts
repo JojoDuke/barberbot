@@ -9,9 +9,6 @@ export const mastra = new Mastra({
   storage: new LibSQLStore({
     url: ":memory:",
   }),
-  bundler: {
-    externals: ["supports-color", "twilio"],
-  },
   logger: new PinoLogger({
     name: 'Mastra',
     level: 'info',
