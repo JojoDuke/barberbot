@@ -32,7 +32,7 @@ export const getAllBusinessesServicesTool = createTool({
     ),
   }),
   execute: async ({ context }) => {
-    let categoryBusinesses = await getBusinessesByCategory(context.category);
+    let categoryBusinesses = getBusinessesByCategory(context.category);
 
     if (context.minRating) {
       categoryBusinesses = categoryBusinesses.filter(

@@ -23,7 +23,7 @@ export const getBusinessInfoTool = createTool({
   execute: async ({ context }) => {
     const response: any = await reservioClient.getBusiness(context.businessId);
     const business = response.data;
-    const configBusiness = await getBusinessById(context.businessId);
+    const configBusiness = getBusinessById(context.businessId);
 
     return {
       name: business.attributes.name,

@@ -4,7 +4,6 @@ import path from 'path';
 import fs from 'fs';
 import { mastra } from '../src/mastra/index.js';
 import { twilioClient } from '../src/lib/twilio.js';
-import { supabase } from '../src/lib/supabase.js';
 import twilio from 'twilio';
 const { MessagingResponse } = twilio.twiml;
 
@@ -126,27 +125,14 @@ app.post('/whatsapp', async (req, res) => {
   const twiml = new MessagingResponse();
 
   try {
-    // Extract incoming message and sender info
     const incomingMessage = req.body.Body || '';
     const senderNumber = req.body.From || '';
-    const senderName = req.body.ProfileName || 'Unknown';
     const messageSid = req.body.MessageSid || '';
 
     console.log(`📱 Incoming WhatsApp Message:`);
-    console.log(`   From: ${senderNumber} (${senderName})`);
+    console.log(`   From: ${senderNumber}`);
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
-
-    // Track user in database
-    try {
-      await supabase.from('users').upsert({
-        phone_number: senderNumber,
-        name: senderName,
-        last_active: new Date().toISOString()
-      }, { onConflict: 'phone_number' });
-    } catch (dbError) {
-      console.warn('⚠️ Failed to save user to database:', dbError);
-    }
 
     // Validate incoming message
     if (!incomingMessage.trim()) {
