@@ -148,34 +148,44 @@ app.post('/whatsapp', async (req, res) => {
         userStates.delete(senderNumber);
 
         try {
-          // Fetch target number from Supabase 'users' table
-          const { data, error } = await supabase
+          // Fetch all target numbers from Supabase 'users' table
+          const { data: users, error } = await supabase
             .from('users')
-            .select('phone_number')
-            .single();
+            .select('phone_number');
 
-          if (error || !data?.phone_number) {
-            console.error('❌ Failed to fetch phone number from users table:', error);
-            twiml.message('❌ Broadcast failed: Could not find target number in users table.');
+          if (error || !users || users.length === 0) {
+            console.error('❌ Failed to fetch users from table:', error);
+            twiml.message('❌ Broadcast failed: No users found in database.');
             res.type('text/xml').send(twiml.toString());
             return;
           }
 
-          const targetNumber = data.phone_number;
-          console.log(`📣 Sending broadcast to: ${targetNumber}`);
+          console.log(`📣 Starting broadcast to ${users.length} users...`);
 
-          // Determine final recipient string
-          const recipient = targetNumber.startsWith('whatsapp:')
-            ? targetNumber
-            : `whatsapp:${targetNumber.startsWith('+') ? targetNumber : '+' + targetNumber}`;
+          let successCount = 0;
+          for (const user of users) {
+            if (!user.phone_number) continue;
 
-          await sendWhatsAppMessageRest(
-            recipient,
-            req.body.To,
-            "📣 This is a test broadcast from BarberBot!"
-          );
+            const targetNumber = user.phone_number;
+            const recipient = targetNumber.startsWith('whatsapp:')
+              ? targetNumber
+              : `whatsapp:${targetNumber.startsWith('+') ? targetNumber : '+' + targetNumber}`;
 
-          twiml.message('✅ Broadcast sent successfully!');
+            try {
+              await sendWhatsAppMessageRest(
+                recipient,
+                req.body.To,
+                "📣 This is a test broadcast from BarberBot!"
+              );
+              successCount++;
+              // Small delay between messages to be safe with rate limits
+              await sleep(100);
+            } catch (sendErr) {
+              console.error(`❌ Failed to send to ${targetNumber}:`, sendErr);
+            }
+          }
+
+          twiml.message(`✅ Broadcast complete! Sent to ${successCount}/${users.length} users.`);
           res.type('text/xml').send(twiml.toString());
           return;
         } catch (err) {
