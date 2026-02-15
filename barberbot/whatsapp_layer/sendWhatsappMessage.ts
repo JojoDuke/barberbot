@@ -5,6 +5,7 @@ import fs from 'fs';
 import twilio from 'twilio';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { mastra } from '../src/mastra/index.js';
+import { supabase } from '../src/lib/supabase.js';
 
 dotenv.config();
 
@@ -15,6 +16,9 @@ app.use(express.urlencoded({ extended: false }));
 
 // Initialize Twilio client
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+// User states for command triggers
+const userStates = new Map<string, 'AWAITING_BROADCAST_CONFIRM'>();
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
@@ -136,38 +140,63 @@ app.post('/whatsapp', async (req, res) => {
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
 
-    // Command Trigger: !x74
-    if (incomingMessage.trim() === '!x74') {
-      console.log('🎯 Command Triggered: !x74');
+    const normalizedMsg = incomingMessage.trim().toLowerCase();
 
-      // Send interactive buttons via REST API
-      try {
-        await client.messages.create({
-          from: req.body.To, // Your Twilio WhatsApp number
-          to: senderNumber,
-          body: 'Send Broadcast?',
-          // Using Twilio's interactive message format for WhatsApp
-          // Note: This requires the 'contentSid' if using templates, 
-          // but for simple session-based buttons we can use the 'persistentAction' or 'contentVariables'
-          // However, for standard WhatsApp Buttons in 2024/2025, Twilio recommends Content API.
-          // For a quick implementation without pre-registered templates, we use standard text buttons if supported by the user's Twilio setup.
-          // Alternatively, we can use a simpler approach for now to ensure it works.
-          persistentAction: [
-            `button|Yes|Yes`,
-            `button|No|No`
-          ] as any // Twilio type might need casting depending on library version
-        });
+    // 1. Handle Broadcast Confirmation State
+    if (userStates.get(senderNumber) === 'AWAITING_BROADCAST_CONFIRM') {
+      if (normalizedMsg === 'yes' || normalizedMsg === '1') {
+        userStates.delete(senderNumber);
 
-        console.log('✅ Interactive buttons sent for !x74');
-        res.type('text/xml').send('<Response></Response>'); // Empty TwiML
-        return;
-      } catch (err) {
-        console.error('❌ Failed to send buttons:', err);
-        // Fallback to plain text if buttons fail
-        twiml.message('Send Broadcast?\n\n1. Yes\n2. No');
+        try {
+          // Fetch target number from Supabase 'users' table
+          const { data, error } = await supabase
+            .from('users')
+            .select('phone_number')
+            .single();
+
+          if (error || !data?.phone_number) {
+            console.error('❌ Failed to fetch phone number from users table:', error);
+            twiml.message('❌ Broadcast failed: Could not find target number in users table.');
+            res.type('text/xml').send(twiml.toString());
+            return;
+          }
+
+          const targetNumber = data.phone_number;
+          console.log(`📣 Sending broadcast to: ${targetNumber}`);
+
+          await sendWhatsAppMessageRest(
+            `whatsapp:${targetNumber.startsWith('+') ? targetNumber : '+' + targetNumber}`,
+            req.body.To,
+            "📣 This is a test broadcast from BarberBot!"
+          );
+
+          twiml.message('✅ Broadcast sent successfully!');
+          res.type('text/xml').send(twiml.toString());
+          return;
+        } catch (err) {
+          console.error('❌ Broadcast failed:', err);
+          twiml.message('❌ Failed to send broadcast message.');
+          res.type('text/xml').send(twiml.toString());
+          return;
+        }
+      } else {
+        // Any other word cancels the broadcast mode
+        userStates.delete(senderNumber);
+        twiml.message('⚠️ Broadcast cancelled.');
         res.type('text/xml').send(twiml.toString());
         return;
       }
+    }
+
+    // 2. Command Trigger: !x74
+    if (normalizedMsg === '!x74') {
+      console.log('🎯 Command Triggered: !x74');
+      userStates.set(senderNumber, 'AWAITING_BROADCAST_CONFIRM');
+
+      // Sending simple text prompt as buttons didn't appear
+      twiml.message('Send Broadcast?\n\nReply *Yes* to confirm or *No* to cancel.');
+      res.type('text/xml').send(twiml.toString());
+      return;
     }
 
     // Validate incoming message
