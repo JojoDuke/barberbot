@@ -164,8 +164,13 @@ app.post('/whatsapp', async (req, res) => {
           const targetNumber = data.phone_number;
           console.log(`📣 Sending broadcast to: ${targetNumber}`);
 
+          // Determine final recipient string
+          const recipient = targetNumber.startsWith('whatsapp:')
+            ? targetNumber
+            : `whatsapp:${targetNumber.startsWith('+') ? targetNumber : '+' + targetNumber}`;
+
           await sendWhatsAppMessageRest(
-            `whatsapp:${targetNumber.startsWith('+') ? targetNumber : '+' + targetNumber}`,
+            recipient,
             req.body.To,
             "📣 This is a test broadcast from BarberBot!"
           );
