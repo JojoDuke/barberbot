@@ -1,59 +1,68 @@
 
-// Test the LTT → STT exchange and then call Merchant/GetInfo
+import fs from 'fs';
+
 const LTT = '7fa41740-f383-415d-b8a1-42c6ee5e1de0';
 const BASE = 'https://api.reservanto.cz/v1';
 
-async function post(endpoint, body, stt = null) {
-    const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
-    if (stt) headers['ShortTimeToken'] = stt;
-
+// Based on 403 vs 401 test - Authorization: STT is the RIGHT format
+// 403 = authenticated but wrong permissions (vs 401 = not authenticated)
+async function post(endpoint, body) {
+    const h = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
     const res = await fetch(`${BASE}${endpoint}`, {
         method: 'POST',
-        headers,
+        headers: h,
         body: JSON.stringify({ ...body, TimeStamp: Math.floor(Date.now() / 1000) })
     });
-
     const text = await res.text();
-    console.log(`\n=== POST ${endpoint} [${res.status}] ===`);
-    try {
-        return JSON.parse(text);
-    } catch {
-        console.log(text.slice(0, 800));
-        return null;
-    }
+    try { return { status: res.status, data: JSON.parse(text) }; }
+    catch { return { status: res.status, raw: text.slice(0, 500) }; }
 }
 
-// Step 1: Exchange LTT for STT
-console.log('Step 1: Getting ShortTimeToken...');
+async function postAuth(endpoint, body, STT) {
+    const h = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': STT  // This gave 403 (permission denied) not 401 (not authed)
+    };
+    const res = await fetch(`${BASE}${endpoint}`, {
+        method: 'POST',
+        headers: h,
+        body: JSON.stringify({ ...body, TimeStamp: Math.floor(Date.now() / 1000) })
+    });
+    const text = await res.text();
+    try { return { status: res.status, data: JSON.parse(text) }; }
+    catch { return { status: res.status, raw: text.slice(0, 500) }; }
+}
+
+// Get STT
 const authResp = await post('/Authorize/GetShortTimeToken', { LongTimeToken: LTT });
-console.log(JSON.stringify(authResp, null, 2));
+const STT = authResp.data?.ShortTimeToken;
 
-if (authResp?.IsError || !authResp?.ShortTimeToken) {
-    console.log('\n❌ Failed to get STT. Token may be invalid or expired.');
-    process.exit(1);
+const out = {
+    stt_obtained: !!STT,
+    endpoints: {}
+};
+
+// Test all key endpoints with Authorization: STT
+const endpoints = [
+    ['/Merchant/GetInfo', {}],
+    ['/Location/GetList', { OnlyPublic: false }],
+    ['/BookingResource/GetList', { OnlyPublic: false }],
+    ['/BookingService/GetList', {}],
+    ['/WorkingHours/GetList', {}],
+];
+
+for (const [ep, body] of endpoints) {
+    const r = await postAuth(ep, body, STT);
+    out.endpoints[ep] = {
+        status: r.status,
+        isError: r.data?.IsError,
+        errMsg: r.data?.ErrorMessage,
+        itemsCount: r.data?.Items?.length,
+        result: r.data?.Result,
+        raw: r.raw
+    };
 }
 
-const STT = authResp.ShortTimeToken;
-console.log(`\n✅ Got STT: ${STT.slice(0, 20)}...`);
-
-// Step 2: Get merchant info
-console.log('\nStep 2: Getting Merchant Info...');
-const merchantInfo = await post('/Merchant/GetInfo', {}, STT);
-console.log(JSON.stringify(merchantInfo, null, 2));
-
-// Step 3: Get booking resources (employees/barbers)
-console.log('\nStep 3: Getting Booking Resources (employees/chairs)...');
-const resources = await post('/BookingResource/GetList', {}, STT);
-console.log(JSON.stringify(resources, null, 2).slice(0, 3000));
-
-// Step 4: Get booking services
-console.log('\nStep 4: Getting Booking Services...');
-const services = await post('/BookingService/GetList', {}, STT);
-console.log(JSON.stringify(services, null, 2).slice(0, 3000));
-
-// Step 5: Get locations
-console.log('\nStep 5: Getting Locations...');
-const locations = await post('/Location/GetList', {}, STT);
-console.log(JSON.stringify(locations, null, 2).slice(0, 3000));
-
-console.log('\n✅ Done!');
+fs.writeFileSync('reservanto-results.json', JSON.stringify(out, null, 2), 'utf8');
+process.stdout.write('DONE\n');

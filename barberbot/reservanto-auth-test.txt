@@ -1,0 +1,5 @@
+[Bearer STT] HTTP 500 | IsError: undefined | count: undefined | 
+[ShortTimeToken] HTTP 401 | IsError: undefined | count: undefined | STT invalid
+[X-Short-Time-Token] HTTP 401 | IsError: undefined | count: undefined | STT invalid
+[Auth STT raw] HTTP 403 | IsError: undefined | count: undefined | Insufficient permissions
+[STT in body] HTTP 401 | IsError: undefined | count: undefined | STT invalid

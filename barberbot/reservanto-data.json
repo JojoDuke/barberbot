@@ -1,0 +1,26 @@
+{
+  "authResp": {
+    "ShortTimeToken": "721D4DDD084FD6D97DF606FE11DEB67E883FE2CF26B14D6EB805A55DCFA99C15FDC8111DA1261CA4CC61BE4782A0E765FED57D2EACEC4801E93ACD67F252A827F5CEF19DE42252A61DCBD8992FB595577CE744B6C50C5ED366974F54F62748419253FE173B2C5B48CDDD118ACE0CCBF4",
+    "IsError": false,
+    "ErrorParameter": null,
+    "ErrorMessage": null,
+    "ErrorParameters": [],
+    "ErrorMessages": []
+  },
+  "merchant": {
+    "status": 401,
+    "raw": "STT invalid"
+  },
+  "resources": {
+    "status": 401,
+    "raw": "STT invalid"
+  },
+  "services": {
+    "status": 401,
+    "raw": "STT invalid"
+  },
+  "locations": {
+    "status": 401,
+    "raw": "STT invalid"
+  }
+}

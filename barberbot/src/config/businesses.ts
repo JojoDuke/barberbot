@@ -6,6 +6,7 @@ export interface Business {
   category: 'barbershop' | 'physiotherapy';
   isDefault?: boolean;
   tokenEnvVar: string;
+  platform: 'reservio' | 'reservanto';
   googleRating?: number;
   imageUrl?: string;
   website?: string;
@@ -18,6 +19,7 @@ export const staticBusinesses: Record<string, Business> = {
     name: 'Rico Studio',
     category: 'barbershop',
     isDefault: true,
+    platform: 'reservio',
     tokenEnvVar: 'RESERVIO_TOKEN_RICO_STUDIO',
     googleRating: 4.8,
     imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIt5gY7jZ8vDC0e9L7fsi09lZ-e7zM3U9_yA&s',
@@ -29,6 +31,7 @@ export const staticBusinesses: Record<string, Business> = {
     name: 'Holičství 21',
     category: 'barbershop',
     isDefault: false,
+    platform: 'reservio',
     tokenEnvVar: 'RESERVIO_TOKEN_HOLICSTVI_21',
     googleRating: 5.0,
     imageUrl: 'https://holicstvi21.cz/wp-content/uploads/2025/07/Holicstvi21_09_DSC_0096U.jpg',
@@ -40,6 +43,7 @@ export const staticBusinesses: Record<string, Business> = {
     name: 'Anatomic Fitness',
     category: 'physiotherapy',
     isDefault: false,
+    platform: 'reservio',
     tokenEnvVar: 'RESERVIO_TOKEN_ANATOMIC_FITNESS',
     googleRating: 4.7,
     imageUrl: 'https://63ab8af83a.clvaw-cdnwnd.com/64e0954f1266dd28e76feb9b8f497be4/200000100-c3853c3855/prostory-12-7.jpeg?ph=63ab8af83a',
@@ -65,6 +69,7 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
       name: b.name,
       category: b.category,
       isDefault: b.is_default,
+      platform: b.platform || 'reservio',
       tokenEnvVar: b.token_env_var,
       googleRating: b.google_rating,
       imageUrl: b.image_url,

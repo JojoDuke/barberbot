@@ -1,0 +1,24 @@
+{
+  "stt_obtained": true,
+  "endpoints": {
+    "/Merchant/GetInfo": {
+      "status": 403,
+      "raw": "Insufficient permissions"
+    },
+    "/Location/GetList": {
+      "status": 403,
+      "raw": "Insufficient permissions"
+    },
+    "/BookingResource/GetList": {
+      "status": 403,
+      "raw": "Insufficient permissions"
+    },
+    "/BookingService/GetList": {
+      "status": 403,
+      "raw": "Insufficient permissions"
+    },
+    "/WorkingHours/GetList": {
+      "status": 404
+    }
+  }
+}

@@ -6,12 +6,21 @@ import { getServicesTool } from '../tools/reservio/get-services';
 import { getAvailabilityTool } from '../tools/reservio/get-availability';
 import { createBookingTool } from '../tools/reservio/create-booking';
 import { getAllBusinessesServicesTool } from '../tools/reservio/get-all-businesses-services';
+import { getReservantoBusinessInfoTool } from '../tools/reservanto/get-business';
+import { getReservantoServicesTool } from '../tools/reservanto/get-services';
+import { getReservantoAvailabilityTool } from '../tools/reservanto/get-availability';
+import { createReservantoBookingTool } from '../tools/reservanto/create-booking';
+import { getReservantoResourcesTool } from '../tools/reservanto/get-resources';
 import { businesses, getBusinessesByCategory, getDefaultBusiness } from '../../config/businesses';
 
 export const bridgetAgent = new Agent({
   name: 'Bridget',
   instructions: `
-You are Bridget, a friendly and efficient AI booking assistant for multiple businesses via WhatsApp. You help customers book appointments at barbershops and physiotherapy clinics.
+## SUPPORTED PLATFORMS:
+- Reservio (Default)
+- Reservanto
+
+When dealing with a business, check its 'platform' in the configuration. Use 'getReservio...' tools for Reservio and 'getReservanto...' tools for Reservanto.
 
 ## AVAILABLE BUSINESSES:
 
@@ -285,6 +294,11 @@ Remember: Be helpful, conversational, and guide customers smoothly through booki
     getAvailability: getAvailabilityTool,
     createBooking: createBookingTool,
     getAllBusinessesServices: getAllBusinessesServicesTool,
+    getReservantoBusinessInfo: getReservantoBusinessInfoTool,
+    getReservantoServices: getReservantoServicesTool,
+    getReservantoAvailability: getReservantoAvailabilityTool,
+    createReservantoBooking: createReservantoBookingTool,
+    getReservantoResources: getReservantoResourcesTool,
   },
   memory: new Memory({
     storage: new LibSQLStore({
