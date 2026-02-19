@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width" />
+	<title>Autorizace pro spr&#225;vu jednoho Reservanto &#250;čtu - Reservanto</title>
+	<link rel="stylesheet" type="text/css" href="/Content/lib/bootstrap/dist/css/bootstrap.min.css?v=5c762e27" />
+	<link rel="stylesheet" type="text/css" href="/Content/HelpPage.min.css?v=7b04fc04" />
+</head>
+
+<body>
+	
+	<script src="/Scripts/lib/jquery/jquery.min.js"></script>
+
+
+	<div class="navbar navbar-fixed-top header">
+		<div class="container">
+			<a id="logo-href" href="/">
+				<img src="/Content/Images/logo-reservanto-white.svg" width="201" height="60" alt="Reservanto" id="logo">
+			</a>
+		</div>
+	</div>
+	<div class="container body-content">
+		
+
+
+<header class="help-page">
+	<div class="content-wrapper">
+		<div class="float-left">
+			<h1>Autorizace <span class="small">pro spr&#225;vu jednoho Reservanto &#250;čtu</span></h1>
+		</div>
+	</div>
+</header>
+<div id="body" class="help-page">
+	<section class="featured">
+		<div class="content-wrapper">
+			<p>Pro využití API s konkrétním obchodníkem je nejprve nutné získat od obchodníka povolení. <br>Toho se docílí přesměrováním obchodníka na Reservanto s konkrétními parametry.</p>
+			<p>Adresa po přesměrování: <a href="https://api.reservanto.cz/v1/Authorize/GetLongTimeToken">https://api.reservanto.cz/v1/Authorize/GetLongTimeToken</a></p>
+
+			<table class="help-page-table intro">
+				<caption>Potřebn&#233; parametry</caption>
+				<thead>
+					<tr>
+						<th>N&#225;zev parametru</th>
+						<th>Př&#237;klad hodnoty</th>
+						<th>Popis</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>clientId</td>
+						<td>77843313-03BD-421D-9BFA-A2BB8E2EBF3E</td>
+						<td>Unik&#225;tn&#237; identifik&#225;tor z&#237;skan&#253; při registraci klienta.</td>
+					</tr>
+					<tr>
+						<td>redirectUrl</td>
+						<td><a href="#" onclick="return false;">http://www.klient.com/Callback</a></td>
+						<td>Konkr&#233;tn&#237; adresa pro přesměrov&#225;n&#237; po potvrzen&#237; pr&#225;v obchodn&#237;kem.</td>
+					</tr>
+					<tr>
+						<td>rights</td>
+						<td>Customer_r</td>
+						<td>Pole opr&#225;vněn&#237;, o kter&#225; klient ž&#225;d&#225;. Jedn&#225; se o pole, takže zn&#225;soben&#237;m tohoto parametru se přid&#225;vaj&#237; dalš&#237; hodnoty. Viz dalš&#237; ř&#225;dek.</td>
+					</tr>
+					<tr>
+						<td>rights</td>
+						<td>Event_r</td>
+						<td>Dalš&#237; opr&#225;vněn&#237;, kter&#233; klient ž&#225;d&#225;.</td>
+					</tr>
+				</tbody>
+			</table>
+			<p>Všechny parametry jsou povinn&#233;.</p>
+			<p>Tyto parametry se posílají metodou <b>GET</b>.</p>
+			<p>Výsledná URL adresa pro přesměrování potom může vypadat například takto:</p>
+
+			
+
+<div>
+	<div class="form-group">
+		<pre><code id="redirect-url-output"></code></pre>
+	</div>
+	
+	<a href="#" id="generator-expander">
+		<span class="glyphicon glyphicon-chevron-right"></span> Gener&#225;tor
+	</a>
+
+	<hr>
+
+	<form id="redirect-url-form" class="collapse">
+		<div class="row">
+			<div class="col-md-6">
+				<div class="form-group">
+					<label for="clientId">clientId</label>
+					<input type="text" class="form-control" id="clientId" value="77843313-03BD-421D-9BFA-A2BB8E2EBF3E" required>
+				</div>
+
+				<div class="form-group">
+					<label for="redirectUrl">redirectUrl</label>
+					<input type="url" class="form-control" id="redirectUrl"value="http://www.klient.com/Callback" placeholder="http://www.klient.com/Callback" required>
+					<small class="text-danger" id="urlError" style="display:none;">Zadejte platnou URL adresu</small>
+				</div>
+			</div>
+
+			<div class="col-md-6">
+				<div class="form-group">
+					<label>rights</label>
+					<div class="rights-group" id="rightsGroup">
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Alternates_r" > Alternates_r
+									<br><small class="text-muted">Čten&#237; n&#225;hradn&#237;ků na ud&#225;lostech</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Alternates_w" > Alternates_w
+									<br><small class="text-muted">Přihl&#225;šen&#237; a odhl&#225;šen&#237; n&#225;hradn&#237;ků na ud&#225;losti</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Booking_w" > Booking_w
+									<br><small class="text-muted">Vytv&#225;řen&#237; a storno rezervac&#237; podle pravidel pro z&#225;kazn&#237;ky</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="BookingResource_r" > BookingResource_r
+									<br><small class="text-muted">Čten&#237; zdrojů (zaměstnanců, prostorů, předmětů, ...)</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="BookingService_r" > BookingService_r
+									<br><small class="text-muted">Čten&#237; služeb</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Course_r" > Course_r
+									<br><small class="text-muted">Čten&#237; kurzů</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Credit_r" > Credit_r
+									<br><small class="text-muted">Čten&#237; kreditov&#253;ch pohybů</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Customer_r" checked> Customer_r
+									<br><small class="text-muted">Čten&#237; seznamu z&#225;kazn&#237;ků</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Customer_w" > Customer_w
+									<br><small class="text-muted">Vytv&#225;řen&#237; a &#250;pravy z&#225;kazn&#237;ků</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="CustomerNotifications" > CustomerNotifications
+									<br><small class="text-muted">Odes&#237;l&#225;n&#237; notifikac&#237; z&#225;kazn&#237;kům</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Event_r" checked> Event_r
+									<br><small class="text-muted">Čten&#237; rezervac&#237;</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="ExternalIdentifiers_r" > ExternalIdentifiers_r
+									<br><small class="text-muted">Čten&#237; objektů API pomoc&#237; extern&#237;ch identifik&#225;torů.</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="ExternalIdentifiers_w" > ExternalIdentifiers_w
+									<br><small class="text-muted">Vytv&#225;řen&#237; a maz&#225;n&#237; extern&#237;ch identifik&#225;torů objektů API</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="FreeSpace_r" > FreeSpace_r
+									<br><small class="text-muted">Př&#237;stup k voln&#253;m m&#237;stům v kalend&#225;ři (m&#237;sta k vytvořen&#237; rezervace)</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="FreeTime_r" > FreeTime_r
+									<br><small class="text-muted">Čten&#237; ud&#225;lost&#237; typu volno</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="FreeTime_w" > FreeTime_w
+									<br><small class="text-muted">Vytv&#225;řen&#237; a &#250;pravy ud&#225;lost&#237; typu volno</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Location_r" > Location_r
+									<br><small class="text-muted">Čten&#237; provozoven</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Merchant_r" > Merchant_r
+									<br><small class="text-muted">Čten&#237; informac&#237; o obchodn&#237;kovi (n&#225;zev, kontakty, IČ, DIČ, ...)</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="NoBookingTimeConstraints" > NoBookingTimeConstraints
+									<br><small class="text-muted">Umožňuje vytv&#225;řen&#237; rezervac&#237; mimo pracovn&#237; dobu i mimo časov&#225; omezen&#237; rezervac&#237;</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Pass_r" > Pass_r
+									<br><small class="text-muted">Čten&#237; permanentek</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="PaymentMethod_r" > PaymentMethod_r
+									<br><small class="text-muted">Čten&#237; platebn&#237;ch metod</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="PriceLevel_r" > PriceLevel_r
+									<br><small class="text-muted">Čten&#237; cenov&#253;ch hladin</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Product_r" > Product_r
+									<br><small class="text-muted">Čten&#237; produktů a kategori&#237; produktů</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Receipt_w" > Receipt_w
+									<br><small class="text-muted">Vytv&#225;řen&#237; pokladn&#237;ch dokladů</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Segment_r" > Segment_r
+									<br><small class="text-muted">Čten&#237; zaměřen&#237;</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="Voucher_r" > Voucher_r
+									<br><small class="text-muted">Čten&#237; voucherů</small>
+								</label>
+							</div>
+							<div class="checkbox">
+								<label>
+									<input type="checkbox" value="WebHooks" > WebHooks
+									<br><small class="text-muted">Umožňuje pr&#225;ci s webhooky - reakce na ud&#225;losti</small>
+								</label>
+							</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</form>
+</div>
+
+<script>
+	var baseUrl = "https://api.reservanto.cz/v1/Authorize/GetLongTimeToken";
+	var firstRightsScroll = false;
+
+	function validateUrl(url) {
+		try {
+			new URL(url);
+			return true;
+		} catch (e) {
+			return false;
+		}
+	}
+
+	function generateUrl() {
+		var clientId = $('#clientId').val().trim();
+		var redirectUrl = $('#redirectUrl').val().trim();
+
+		if (!validateUrl(redirectUrl)) {
+			$('#urlError').show();
+			$('#redirectUrl').closest('.form-group').addClass('has-error');
+			$('#redirect-url-output').text("Zadejte platnou URL adresu");
+			return;
+		} else {
+			$('#urlError').hide();
+			$('#redirectUrl').closest('.form-group').removeClass('has-error');
+		}
+
+		var rights = [];
+		$('#rightsGroup input[type="checkbox"]:checked').each(function () {
+			rights.push($(this).val());
+		});
+
+		var params = [];
+		params.push("clientId" + '=' + encodeURIComponent(clientId));
+		params.push("redirectUrl" + '=' + encodeURIComponent(redirectUrl));
+
+		for (var i = 0; i < rights.length; i++) {
+			params.push("rights" + '=' + encodeURIComponent(rights[i]));
+		}
+
+		var fullUrl = baseUrl + '?' + params.join('&');
+		$('#redirect-url-output').text(fullUrl);
+	}
+
+	function generatorShow(show) {
+		if (show) {
+			$('#redirect-url-form').slideDown();
+			$('#generator-expander .glyphicon')
+				.removeClass('glyphicon-chevron-right')
+				.addClass('glyphicon-chevron-down');
+
+			scrollToFirstRight();
+		} else {
+			$('#redirect-url-form').slideUp();
+			$('#generator-expander .glyphicon')
+				.removeClass('glyphicon-chevron-down')
+				.addClass('glyphicon-chevron-right');
+		}
+	}
+
+	function scrollToFirstRight() {
+		if (firstRightsScroll)
+			return;
+
+		
+		var firstChecked = $('#rightsGroup input[type="checkbox"]:checked').first();
+		if (firstChecked.length > 0) {
+			firstRightsScroll = true;
+			var container = $('#rightsGroup');
+			var checkboxPos = firstChecked.closest('.checkbox').position().top;
+			container.scrollTop(checkboxPos - 35);
+		}
+	}
+
+	$(document).ready(function () {
+		generateUrl();
+
+		
+		$('#redirect-url-output').mousedown(function () {
+			generatorShow(true);
+		});
+
+		
+		$('#generator-expander').click(function () {
+			const isVisible = $('#redirect-url-form').is(':visible');
+			generatorShow(!isVisible);
+
+			return false;
+		});
+
+		$('#clientId, #redirectUrl').on('input', generateUrl);
+		$('#rightsGroup input[type="checkbox"]').on('change', generateUrl);
+	});
+</script>
+
+			<h2>Přesměrov&#225;n&#237; na klienta</h2>
+			<p>Po přesměrov&#225;n&#237; na stranu rezervačn&#237;ho syst&#233;mu Reservanto se obchodn&#237;k buď nejprve přihl&#225;s&#237;, nebo je mu rovnou zobrazen podobn&#253; formul&#225;ř jako na obr&#225;zku n&#237;že.</p>
+
+			<div style="text-align: center">
+				<img src="/Content/Images/api_exmple.png" />
+			</div>
+
+			<p>
+
+			</p>
+			<p>
+				Obchodn&#237;k př&#237;stup buď povol&#237;, nebo zam&#237;tne a pot&#233; dojde k přesměrov&#225;n&#237; zpět na klienta a jeho zadanou redirectUrl (pokud je zaregistrov&#225;na).
+				<ul>
+					<li><p>V případě, že obchodník <b>přístup zamítl</b>, dojde k přesměrování s parametry v tomto tvaru:<br/>
+<a href="#" onclick="return false;">http://www.klient.com/Callback?accepted=0&token=</a><br />
+Parametr <b>accepted</b> je nastaven na <b>hodnotu 0</b> a parametr <b>token nemá hodnotu</b>.</p></li>
+					<li><p>V případě, že obchodník <b>přístup povolil</b>, dojde k přesměrování s těmito parametry:<br/>
+<a href="#" onclick="return false;">http://www.klient.com/Callback?accepted=1&token=68123711-026d-4ae4-8f9d-405a9de544d1</a><br />
+Parametr <b>accepted</b> je nastaven na <b>hodnotu 1</b> a parametr token má nastavenou hodnotu.<br />
+Navrácená hodnota parametru <b>token</b> je takzvaný <b>LongTimeToken (dále jen LTT)</b> a ten je nutné si pro konkrétního uživatele uložit. Bude potřeba při další komunikaci.</p></li>
+				</ul>
+			</p>
+		</div>
+	</section>
+</div>
+
+
+		<hr />
+
+		<footer>
+			<span class="right small">
+				Revize: 06. 02. 2026
+			</span>
+		</footer>
+	</div>
+
+	<script type="text/javascript">
+		var trs = document.getElementsByTagName("tr");
+
+		for (let i = 0; i < trs.length; i++) {
+			let current = trs[i];
+			let anchor = current.getElementsByTagName("a");
+
+			if (anchor.length > 0) {
+				current.addEventListener("click", function () {
+					anchor[0].click();
+				});
+			}
+		}
+	</script>
+</body>
+</html>
