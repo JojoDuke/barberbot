@@ -1,0 +1,24 @@
+{
+  "customers": {
+    "status": 200,
+    "data": {
+      "Customers": [],
+      "IsError": false,
+      "ErrorParameter": null,
+      "ErrorMessage": null,
+      "ErrorParameters": [],
+      "ErrorMessages": []
+    }
+  },
+  "bookings": {
+    "status": 200,
+    "data": {
+      "BookingInfoModels": [],
+      "IsError": false,
+      "ErrorParameter": null,
+      "ErrorMessage": null,
+      "ErrorParameters": [],
+      "ErrorMessages": []
+    }
+  }
+}
