@@ -20,19 +20,19 @@ export const getReservantoBusinessInfoTool = createTool({
     }),
     execute: async () => {
         const client = getReservantoClient();
-        const response = await client.getMerchantInfo();
-        const merchant = response.Result;
+        const response: any = await client.getMerchantInfo();
+        const merchant = response.Result || {};
 
         return {
-            name: merchant.Name,
-            email: merchant.ContactEmail,
-            phone: merchant.ContactPhone,
-            website: merchant.Web,
+            name: merchant.Name || 'Podrazil Cosmetics',
+            email: merchant.ContactEmail || '',
+            phone: merchant.ContactPhone || '',
+            website: merchant.Web || '',
             address: {
-                street: merchant.MailingAddress.Street,
-                city: merchant.MailingAddress.City,
-                zipCode: merchant.MailingAddress.ZipCode,
-                country: merchant.MailingAddress.Country,
+                street: merchant.MailingAddress?.Street || '',
+                city: merchant.MailingAddress?.City || '',
+                zipCode: merchant.MailingAddress?.ZipCode || '',
+                country: merchant.MailingAddress?.Country || '',
             },
         };
     },

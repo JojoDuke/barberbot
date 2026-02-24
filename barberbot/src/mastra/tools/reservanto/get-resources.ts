@@ -20,15 +20,17 @@ export const getReservantoResourcesTool = createTool({
     }),
     execute: async ({ context }) => {
         const client = getReservantoClient();
-        const response = await client.getBookingResources(context.locationId);
+        const response: any = await client.getBookingResources(context.locationId);
+
+        const resourceList = response.Items || [];
 
         return {
-            resources: response.Items.map(r => ({
-                id: r.Id,
+            resources: resourceList.map((r: any) => ({
+                id: r.Id || r.BookingResourceId,
                 name: r.Name,
-                email: r.Email,
-                phone: r.Phone,
-                description: r.Description,
+                email: r.Email || '',
+                phone: r.Phone || '',
+                description: r.Description || '',
                 locationId: r.LocationId,
             })),
         };

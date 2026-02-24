@@ -18,16 +18,18 @@ export const getReservantoServicesTool = createTool({
     }),
     execute: async () => {
         const client = getReservantoClient();
-        const response = await client.getServices();
+        const response: any = await client.getServices();
+
+        const serviceList = response.BookingServices || response.Items || [];
 
         return {
-            services: response.Items.map(s => ({
-                id: s.Id,
+            services: serviceList.map((s: any) => ({
+                id: s.Id || s.BookingServiceId,
                 name: s.Name,
-                description: s.Description,
+                description: s.Description || '',
                 duration: s.Duration,
-                price: s.Price,
-                currency: s.Currency,
+                price: s.Price || 0,
+                currency: s.Currency || 'CZK',
             })),
         };
     },
