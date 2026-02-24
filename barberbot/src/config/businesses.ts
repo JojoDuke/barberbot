@@ -50,6 +50,16 @@ export const staticBusinesses: Record<string, Business> = {
     website: 'https://www.anatomicfitness.cz',
     instagram: 'https://www.instagram.com/anatomicfitness',
   },
+  podrazilCosmetics: {
+    id: '24614',
+    name: 'Podrazil Cosmetics',
+    category: 'physiotherapy', // Mapping to physio for now as it's closer than barbershop
+    isDefault: false,
+    platform: 'reservanto',
+    tokenEnvVar: 'RESERVANTO_LTT',
+    googleRating: 4.9,
+    imageUrl: 'https://merchant.reservanto.cz/Images/no-avatar.png',
+  },
 };
 
 // Backwards compatibility

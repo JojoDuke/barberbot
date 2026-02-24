@@ -2,12 +2,28 @@
   "stt_obtained": true,
   "endpoints": {
     "/Merchant/GetInfo": {
-      "status": 403,
-      "raw": "Insufficient permissions"
+      "status": 200,
+      "isError": false,
+      "errMsg": null,
+      "result": {
+        "Name": null,
+        "ContactEmail": "Tomas.podrazil@gmail.com",
+        "ContactPhone": "+420606610106",
+        "Web": null,
+        "MailingAddress": null,
+        "InvoiceAddress": null,
+        "IsVatPayer": false,
+        "PersonalIdentifier": null,
+        "VatNumber": null,
+        "VatId": null,
+        "Id": 24614
+      }
     },
     "/Location/GetList": {
-      "status": 403,
-      "raw": "Insufficient permissions"
+      "status": 200,
+      "isError": false,
+      "errMsg": null,
+      "itemsCount": 1
     },
     "/BookingResource/GetList": {
       "status": 403,

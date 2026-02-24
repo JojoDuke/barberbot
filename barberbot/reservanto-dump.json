@@ -1,0 +1,210 @@
+{
+  "merchant": {
+    "Result": {
+      "Name": null,
+      "ContactEmail": "Tomas.podrazil@gmail.com",
+      "ContactPhone": "+420606610106",
+      "Web": null,
+      "MailingAddress": null,
+      "InvoiceAddress": null,
+      "IsVatPayer": false,
+      "PersonalIdentifier": null,
+      "VatNumber": null,
+      "VatId": null,
+      "Id": 24614
+    },
+    "IsError": false,
+    "ErrorParameter": null,
+    "ErrorMessage": null,
+    "ErrorParameters": [],
+    "ErrorMessages": []
+  },
+  "locations": {
+    "Items": [
+      {
+        "LocationId": 24927,
+        "Name": "Výchozí provozovna",
+        "CreatedAt": 1770219161,
+        "ModifiedAt": 1770219161,
+        "Description": null,
+        "Phone": null,
+        "Email": null,
+        "Address": null,
+        "WorkingHours": [
+          {
+            "DayOfWeek": 1,
+            "Start": 1771912800,
+            "End": 1771956000
+          },
+          {
+            "DayOfWeek": 2,
+            "Start": 1771912800,
+            "End": 1771956000
+          },
+          {
+            "DayOfWeek": 3,
+            "Start": 1771912800,
+            "End": 1771956000
+          },
+          {
+            "DayOfWeek": 4,
+            "Start": 1771912800,
+            "End": 1771956000
+          },
+          {
+            "DayOfWeek": 5,
+            "Start": 1771912800,
+            "End": 1771956000
+          }
+        ],
+        "State": "Public",
+        "Id": 24927
+      }
+    ],
+    "IsError": false,
+    "ErrorParameter": null,
+    "ErrorMessage": null,
+    "ErrorParameters": [],
+    "ErrorMessages": []
+  },
+  "resources": {
+    "Items": [
+      {
+        "BookingResource": 43281,
+        "LocationId": 24927,
+        "Name": "Kosmetička",
+        "Email": null,
+        "Phone": null,
+        "Description": null,
+        "MinTimeUnit": 60,
+        "ImageUrl": "https://merchant.reservanto.cz/Images/no-avatar.png",
+        "HasCustomImage": false,
+        "State": "Public",
+        "SegmentIds": [
+          3
+        ],
+        "BookingServiceIds": [
+          112545,
+          112546,
+          112547,
+          112548,
+          112549
+        ],
+        "TagIds": [],
+        "Capacity": 0,
+        "AvailableFrom": null,
+        "AvailableTo": null,
+        "Id": 43281
+      }
+    ],
+    "IsError": false,
+    "ErrorParameter": null,
+    "ErrorMessage": null,
+    "ErrorParameters": [],
+    "ErrorMessages": []
+  },
+  "services": {
+    "BookingServices": [
+      {
+        "BookingServiceId": 112545,
+        "Name": "Kompletní ošetření pleti",
+        "Description": null,
+        "Duration": 90,
+        "Price": null,
+        "VatRate": 0,
+        "VatRateNullable": null,
+        "SegmentId": 3,
+        "SegmentName": "Kosmetika",
+        "CategoryId": null,
+        "CategoryName": null,
+        "BookingResourceIds": [
+          43281
+        ],
+        "AvailablePriceLevels": [],
+        "State": "Public",
+        "Id": 112545
+      },
+      {
+        "BookingServiceId": 112546,
+        "Name": "Denní líčení",
+        "Description": null,
+        "Duration": 60,
+        "Price": null,
+        "VatRate": 0,
+        "VatRateNullable": null,
+        "SegmentId": 3,
+        "SegmentName": "Kosmetika",
+        "CategoryId": null,
+        "CategoryName": null,
+        "BookingResourceIds": [
+          43281
+        ],
+        "AvailablePriceLevels": [],
+        "State": "Public",
+        "Id": 112546
+      },
+      {
+        "BookingServiceId": 112547,
+        "Name": "Depilace",
+        "Description": null,
+        "Duration": 60,
+        "Price": null,
+        "VatRate": 0,
+        "VatRateNullable": null,
+        "SegmentId": 3,
+        "SegmentName": "Kosmetika",
+        "CategoryId": null,
+        "CategoryName": null,
+        "BookingResourceIds": [
+          43281
+        ],
+        "AvailablePriceLevels": [],
+        "State": "Public",
+        "Id": 112547
+      },
+      {
+        "BookingServiceId": 112548,
+        "Name": "Manuální lifting obličeje",
+        "Description": null,
+        "Duration": 60,
+        "Price": null,
+        "VatRate": 0,
+        "VatRateNullable": null,
+        "SegmentId": 3,
+        "SegmentName": "Kosmetika",
+        "CategoryId": null,
+        "CategoryName": null,
+        "BookingResourceIds": [
+          43281
+        ],
+        "AvailablePriceLevels": [],
+        "State": "Public",
+        "Id": 112548
+      },
+      {
+        "BookingServiceId": 112549,
+        "Name": "Permanentní make-up",
+        "Description": null,
+        "Duration": 120,
+        "Price": null,
+        "VatRate": 0,
+        "VatRateNullable": null,
+        "SegmentId": 3,
+        "SegmentName": "Kosmetika",
+        "CategoryId": null,
+        "CategoryName": null,
+        "BookingResourceIds": [
+          43281
+        ],
+        "AvailablePriceLevels": [],
+        "State": "Public",
+        "Id": 112549
+      }
+    ],
+    "IsError": false,
+    "ErrorParameter": null,
+    "ErrorMessage": null,
+    "ErrorParameters": [],
+    "ErrorMessages": []
+  }
+}

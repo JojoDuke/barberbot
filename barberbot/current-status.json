@@ -1,0 +1,44 @@
+{
+  "merchant": {
+    "status": 200,
+    "isError": false,
+    "errMsg": null,
+    "count": 1
+  },
+  "locations": {
+    "status": 200,
+    "isError": false,
+    "errMsg": null,
+    "count": 1
+  },
+  "services": {
+    "status": 200,
+    "isError": false,
+    "errMsg": null,
+    "count": 0
+  },
+  "resources": {
+    "status": 200,
+    "isError": false,
+    "errMsg": null,
+    "count": 1
+  },
+  "customers": {
+    "status": 200,
+    "isError": false,
+    "errMsg": null,
+    "count": 0
+  },
+  "bookings": {
+    "status": 200,
+    "isError": false,
+    "errMsg": null,
+    "count": 0
+  },
+  "availability": {
+    "status": 200,
+    "isError": true,
+    "errMsg": "Hledaný zdroj (už) neexistuje!",
+    "count": 0
+  }
+}
