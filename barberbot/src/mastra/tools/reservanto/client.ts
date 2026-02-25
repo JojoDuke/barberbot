@@ -271,28 +271,37 @@ export class ReservantoClient {
         lastName: string;
         email?: string;
         phone?: string;
-    }) {
+    }): Promise<number> {
         // First try to find by phone or email
-        const searchRes = await this.post<{
-            Items: Array<{ Id: number; FirstName: string; LastName: string; Email: string; Phone: string }>;
-        }>('/Customer/GetList', {
-            Phone: params.phone ?? null,
-            Email: params.email ?? null,
-        }).catch(() => ({ Items: [] }));
+        const searchRes: any = await this.post('/Customer/GetList', {
+            Phone: params.phone || null,
+            Email: params.email || null,
+        }).catch(() => ({}));
 
-        if (searchRes.Items && searchRes.Items.length > 0) {
-            return searchRes.Items[0];
+        // Reservanto returns Customers (not Items) for this endpoint
+        const customerList = searchRes.Customers || searchRes.Items || [];
+        if (customerList.length > 0) {
+            return customerList[0].Id;
         }
 
         // Create new customer
-        return this.post<{
-            Result: { Id: number; FirstName: string; LastName: string };
-        }>('/Customer/Create', {
+        const createRes: any = await this.post('/Customer/Create', {
             FirstName: params.firstName,
             LastName: params.lastName,
-            Email: params.email ?? null,
-            Phone: params.phone ?? null,
+            Email: params.email || null,
+            Phone: params.phone || null,
         });
+
+        // API may return Result.Id or Customers[0].Id or direct Id
+        const newId =
+            createRes?.Result?.Id ??
+            createRes?.Customers?.[0]?.Id ??
+            createRes?.Id;
+
+        if (!newId) {
+            throw new Error(`Failed to create customer: ${JSON.stringify(createRes)}`);
+        }
+        return newId;
     }
 }
 

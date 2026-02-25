@@ -23,18 +23,16 @@ export const createReservantoBookingTool = createTool({
     execute: async ({ context }) => {
         const client = getReservantoClient();
 
-        // 1. Find or create customer
-        const customer = await client.findOrCreateCustomer({
+        // 1. Find or create customer — now returns a number (customerId) directly
+        const customerId = await client.findOrCreateCustomer({
             firstName: context.firstName,
             lastName: context.lastName,
             email: context.email,
             phone: context.phone,
         });
 
-        const customerId = 'Id' in customer ? customer.Id : customer.Result.Id;
-
         // 2. Create booking
-        const booking = await client.createBooking({
+        const booking: any = await client.createBooking({
             bookingResourceId: context.resourceId,
             bookingServiceId: context.serviceId,
             customerId: customerId,
@@ -43,10 +41,14 @@ export const createReservantoBookingTool = createTool({
             forceConfirmed: true,
         });
 
+        // Reservanto may return AppointmentId or Id
+        const bookingId = booking.AppointmentId ?? booking.Id ?? booking.Result?.Id ?? 0;
+        const status = booking.Status ?? booking.State ?? 'Confirmed';
+
         return {
-            bookingId: booking.AppointmentId,
-            status: booking.Status,
-            message: `Booking ${booking.Status} successfully`,
+            bookingId,
+            status,
+            message: `Booking confirmed successfully! Appointment ID: ${bookingId}`,
         };
     },
 });
