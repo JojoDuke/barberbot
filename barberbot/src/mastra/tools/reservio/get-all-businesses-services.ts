@@ -32,7 +32,7 @@ export const getAllBusinessesServicesTool = createTool({
     ),
   }),
   execute: async ({ context }) => {
-    let categoryBusinesses = getBusinessesByCategory(context.category);
+    let categoryBusinesses = await getBusinessesByCategory(context.category);
 
     if (context.minRating) {
       categoryBusinesses = categoryBusinesses.filter(
@@ -48,14 +48,14 @@ export const getAllBusinessesServicesTool = createTool({
             reservioClient.getBusiness(business.id),
           ]);
 
-          const services = servicesResponse.data.map((service: any) => ({
+          const services = (servicesResponse.data || []).map((service: any) => ({
             id: service.id,
             name: service.attributes.name,
             durationMinutes: Math.round(service.attributes.duration / 60),
             cost: service.attributes.cost,
           }));
 
-          const address = businessResponse.data.attributes.street || '';
+          const address = business.address || businessResponse.data?.attributes?.street || '';
 
           return {
             id: business.id,
@@ -72,7 +72,7 @@ export const getAllBusinessesServicesTool = createTool({
           return {
             id: business.id,
             name: business.name,
-            address: '',
+            address: business.address || '',
             website: business.website,
             instagram: business.instagram,
             googleRating: business.googleRating,

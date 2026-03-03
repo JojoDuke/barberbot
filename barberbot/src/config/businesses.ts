@@ -11,6 +11,7 @@ export interface Business {
   imageUrl?: string;
   website?: string;
   instagram?: string;
+  address?: string;
 }
 
 export const staticBusinesses: Record<string, Business> = {
@@ -24,7 +25,8 @@ export const staticBusinesses: Record<string, Business> = {
     googleRating: 4.8,
     imageUrl: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTIt5gY7jZ8vDC0e9L7fsi09lZ-e7zM3U9_yA&s',
     website: 'https://www.ricostudio.cz',
-    instagram: 'https://www.instagram.com/ricostudio_prague',
+    instagram: 'ricostudio_prague',
+    address: 'Sokolovská 74, Praha 8',
   },
   holicstvi21: {
     id: 'd709a085-8c00-4bea-af6c-438e5741521a',
@@ -36,7 +38,8 @@ export const staticBusinesses: Record<string, Business> = {
     googleRating: 5.0,
     imageUrl: 'https://holicstvi21.cz/wp-content/uploads/2025/07/Holicstvi21_09_DSC_0096U.jpg',
     website: 'https://holicstvi21.cz',
-    instagram: 'https://www.instagram.com/holicstvi21',
+    instagram: 'holicstvi21',
+    address: 'Sokolovská 88, Praha 8',
   },
   anatomicFitness: {
     id: 'fc376586-8906-4c0a-8cd3-be382a3c4a89',
@@ -48,17 +51,21 @@ export const staticBusinesses: Record<string, Business> = {
     googleRating: 4.7,
     imageUrl: 'https://63ab8af83a.clvaw-cdnwnd.com/64e0954f1266dd28e76feb9b8f497be4/200000100-c3853c3855/prostory-12-7.jpeg?ph=63ab8af83a',
     website: 'https://www.anatomicfitness.cz',
-    instagram: 'https://www.instagram.com/anatomicfitness',
+    instagram: 'anatomicfitness',
+    address: 'Sokolovská 74, Praha 8',
   },
   podrazilCosmetics: {
     id: '24614',
     name: 'Podrazil Cosmetics',
-    category: 'physiotherapy', // Mapping to physio for now as it's closer than barbershop
+    category: 'physiotherapy',
     isDefault: false,
     platform: 'reservanto',
     tokenEnvVar: 'RESERVANTO_LTT',
     googleRating: 4.9,
     imageUrl: 'https://merchant.reservanto.cz/Images/no-avatar.png',
+    website: 'https://www.podrazilcosmetics.cz', // Placeholder if not sure
+    instagram: 'podrazilcosmetics',
+    address: 'Praha 8',
   },
 };
 
@@ -85,6 +92,7 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
       imageUrl: b.image_url,
       website: b.website,
       instagram: b.instagram,
+      address: b.address,
     }));
   } catch (err) {
     return Object.values(staticBusinesses);
