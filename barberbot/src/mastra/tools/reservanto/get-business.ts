@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { getReservantoClient } from './client';
+import { businesses } from '../../../config/businesses';
 
 export const getReservantoBusinessInfoTool = createTool({
     id: 'get-reservanto-business-info',
@@ -11,29 +12,24 @@ export const getReservantoBusinessInfoTool = createTool({
         email: z.string(),
         phone: z.string(),
         website: z.string().optional(),
-        address: z.object({
-            street: z.string(),
-            city: z.string(),
-            zipCode: z.string(),
-            country: z.string(),
-        }),
+        instagram: z.string().optional(),
+        address: z.string().optional(),
+        googleRating: z.number().optional(),
     }),
     execute: async () => {
         const client = getReservantoClient();
         const response: any = await client.getMerchantInfo();
         const merchant = response.Result || {};
+        const configBusiness = businesses.podrazilCosmetics;
 
         return {
-            name: merchant.Name || 'Podrazil Cosmetics',
+            name: merchant.Name || configBusiness.name || 'Podrazil Cosmetics',
             email: merchant.ContactEmail || '',
             phone: merchant.ContactPhone || '',
-            website: merchant.Web || '',
-            address: {
-                street: merchant.MailingAddress?.Street || '',
-                city: merchant.MailingAddress?.City || '',
-                zipCode: merchant.MailingAddress?.ZipCode || '',
-                country: merchant.MailingAddress?.Country || '',
-            },
+            website: merchant.Web || configBusiness.website,
+            instagram: configBusiness.instagram,
+            address: configBusiness.address,
+            googleRating: configBusiness.googleRating,
         };
     },
 });

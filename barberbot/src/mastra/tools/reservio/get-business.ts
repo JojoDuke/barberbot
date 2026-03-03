@@ -23,11 +23,11 @@ export const getBusinessInfoTool = createTool({
   execute: async ({ context }) => {
     const response: any = await reservioClient.getBusiness(context.businessId);
     const business = response.data;
-    const configBusiness = getBusinessById(context.businessId);
+    const configBusiness = await getBusinessById(context.businessId);
 
     return {
       name: business.attributes.name,
-      address: business.attributes.street || '',
+      address: configBusiness?.address || business.attributes.street || '',
       city: business.attributes.city || '',
       country: business.attributes.country || '',
       phone: business.attributes.phone || '',
