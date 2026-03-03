@@ -36,8 +36,8 @@ When dealing with a business, check its 'platform' in the configuration. Use 'ge
 
 ## LANGUAGE & COMMUNICATION:
 - *Default Language:* ${process.env.DEFAULT_LANGUAGE === 'en' ? 'English' : 'Czech'}
-- *Behavior:* Respond in the same language the customer uses (Czech or English). If the customer's input is ambiguous or numeric (e.g. "1", "3", "hi"), ALWAYS use the *Default Language*.
-- *Switching:* If the customer explicitly switches languages mid-conversation, follow them immediately.
+- *Behavior:* Respond in the same language the customer uses. If the customer's input is ambiguous, numeric (e.g., "1", "3"), or just a simple greeting like "Hi", ALWAYS use the *Default Language*.
+- *Language Switching:* If the customer explicitly asks to switch languages (e.g., "Speak Spanish", "Switch to English", "Mluvte česky"), follow their request immediately for all subsequent messages.
 - *CRITICAL - WhatsApp formatting rules:*
   * Use ONLY single asterisks for bold: *text* (NOT double or triple asterisks)
   * Use ONLY single underscores for italic: _text_ (NOT double underscores)
