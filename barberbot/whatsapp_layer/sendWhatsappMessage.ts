@@ -140,6 +140,32 @@ app.post('/whatsapp', async (req, res) => {
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
 
+    // Background: Ensure user exists in Supabase 'users' table
+    (async () => {
+      try {
+        const cleanNumber = senderNumber.replace('whatsapp:', '');
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('phone_number')
+          .eq('phone_number', cleanNumber)
+          .maybeSingle();
+
+        if (!existingUser) {
+          const { error } = await supabase
+            .from('users')
+            .insert({ phone_number: cleanNumber });
+
+          if (error) {
+            console.error('❌ Failed to register new user in Supabase:', error.message);
+          } else {
+            console.log(`🆕 Registered new user: ${cleanNumber}`);
+          }
+        }
+      } catch (err) {
+        console.error('❌ Error during user sync in Supabase:', err);
+      }
+    })();
+
     const normalizedMsg = incomingMessage.trim().toLowerCase();
 
     // 1. Handle Broadcast Confirmation State

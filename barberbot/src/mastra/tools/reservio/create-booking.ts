@@ -1,6 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { reservioClient } from './client';
+import { supabase } from '../../../lib/supabase';
 
 export const createBookingTool = createTool({
   id: 'create-booking',
@@ -34,6 +35,21 @@ export const createBookingTool = createTool({
     });
 
     const booking = response.data;
+
+    // Background: Update user info in Supabase
+    try {
+      const cleanPhone = context.clientPhone.replace('whatsapp:', '');
+      await supabase
+        .from('users')
+        .update({
+          full_name: context.clientName,
+          email: context.clientEmail,
+        })
+        .eq('phone_number', cleanPhone);
+      console.log(`✅ Updated Supabase user info for ${cleanPhone}`);
+    } catch (err) {
+      console.error('❌ Failed to update Supabase user info:', err);
+    }
 
     return {
       bookingId: booking.id,
