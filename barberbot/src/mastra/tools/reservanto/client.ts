@@ -1,25 +1,20 @@
 
+import { getBusinessById, type Business } from '../../../config/businesses';
 
 const BASE_URL = 'https://api.reservanto.cz/v1';
 
-// Cache STT in memory for 25 minutes (it lasts 30)
-let cachedSTT: string | null = null;
-let sttExpiresAt: number = 0;
-
 export class ReservantoClient {
     private ltt: string;
+    private cachedSTT: string | null = null;
+    private sttExpiresAt: number = 0;
 
     constructor(ltt: string) {
         this.ltt = ltt;
     }
 
-    // ──────────────────────────────────────────────
-    // Auth: LTT → STT exchange
-    // ──────────────────────────────────────────────
-
     private async getSTT(): Promise<string> {
         const now = Math.floor(Date.now() / 1000);
-        if (cachedSTT && now < sttExpiresAt) return cachedSTT;
+        if (this.cachedSTT && now < this.sttExpiresAt) return this.cachedSTT;
 
         const res = await fetch(`${BASE_URL}/Authorize/GetShortTimeToken`, {
             method: 'POST',
@@ -33,10 +28,13 @@ export class ReservantoClient {
             throw new Error(`Reservanto auth failed: ${data.ErrorMessage || 'Unknown error'}`);
         }
 
-        cachedSTT = data.ShortTimeToken;
-        sttExpiresAt = now + 25 * 60; // cache 25 min
-        return cachedSTT;
+        this.cachedSTT = data.ShortTimeToken;
+        this.sttExpiresAt = now + 25 * 60; // cache 25 min
+        return this.cachedSTT;
     }
+    // ... (rest of the class remains the same but using this.post)
+    // Actually I need to make sure post uses this.getSTT which it already does.
+    // I will replace the global functions at the end too.
 
     // ──────────────────────────────────────────────
     // Generic POST helper
@@ -305,12 +303,13 @@ export class ReservantoClient {
     }
 }
 
-// Singleton instance using env var
-let _client: ReservantoClient | null = null;
+// Factory function to get client for a specific business
+export async function getReservantoClient(businessId: string): Promise<ReservantoClient> {
+    const business = await getBusinessById(businessId);
+    if (!business) throw new Error(`Business ${businessId} not found`);
 
-export function getReservantoClient(): ReservantoClient {
-    const ltt = process.env.RESERVANTO_LTT;
-    if (!ltt) throw new Error('Missing RESERVANTO_LTT environment variable');
-    if (!_client) _client = new ReservantoClient(ltt);
-    return _client;
+    const ltt = business.token || (business.tokenEnvVar ? process.env[business.tokenEnvVar] : undefined);
+    if (!ltt) throw new Error(`Missing Reservanto LTT/token for ${business.name}.`);
+
+    return new ReservantoClient(ltt);
 }

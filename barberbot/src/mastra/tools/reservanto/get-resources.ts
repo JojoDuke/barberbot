@@ -6,6 +6,7 @@ export const getReservantoResourcesTool = createTool({
     id: 'get-reservanto-resources',
     description: 'Get list of booking resources (employees/barbers/chairs) for the Reservanto business',
     inputSchema: z.object({
+        businessId: z.string().describe('The Reservanto business ID'),
         locationId: z.number().optional().describe('Filter by specific location ID'),
     }),
     outputSchema: z.object({
@@ -19,7 +20,7 @@ export const getReservantoResourcesTool = createTool({
         })),
     }),
     execute: async ({ context }) => {
-        const client = getReservantoClient();
+        const client = await getReservantoClient(context.businessId);
         const response: any = await client.getBookingResources(context.locationId);
 
         const resourceList = response.Items || [];

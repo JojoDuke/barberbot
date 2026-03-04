@@ -6,6 +6,7 @@ export const getReservantoAvailabilityTool = createTool({
     id: 'get-reservanto-availability',
     description: 'Check available booking slots for a service in a given time range',
     inputSchema: z.object({
+        businessId: z.string().describe('The Reservanto business ID'),
         serviceId: z.number().describe('The Reservanto service ID'),
         resourceId: z.number().optional().describe('Optional specific employee/resource ID'),
         locationId: z.number().optional().describe('Optional specific location ID'),
@@ -16,7 +17,7 @@ export const getReservantoAvailabilityTool = createTool({
         availableSlots: z.array(z.string().describe('ISO date strings of available start times')),
     }),
     execute: async ({ context }) => {
-        const client = getReservantoClient();
+        const client = await getReservantoClient(context.businessId);
         const start = new Date(context.startDate);
         const end = new Date(context.endDate);
 

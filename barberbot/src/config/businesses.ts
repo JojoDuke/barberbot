@@ -3,9 +3,10 @@ import { supabase } from '../lib/supabase.js';
 export interface Business {
   id: string;
   name: string;
-  category: 'barbershop' | 'physiotherapy';
+  category: 'barbershop' | 'physiotherapy' | 'cosmetics';
   isDefault?: boolean;
-  tokenEnvVar: string;
+  tokenEnvVar?: string;
+  token?: string;
   platform: 'reservio' | 'reservanto';
   googleRating?: number;
   imageUrl?: string;
@@ -57,13 +58,13 @@ export const staticBusinesses: Record<string, Business> = {
   podrazilCosmetics: {
     id: '24614',
     name: 'Podrazil Cosmetics',
-    category: 'physiotherapy',
+    category: 'cosmetics',
     isDefault: false,
     platform: 'reservanto',
     tokenEnvVar: 'RESERVANTO_LTT',
     googleRating: 4.9,
     imageUrl: 'https://merchant.reservanto.cz/Images/no-avatar.png',
-    website: 'https://www.podrazilcosmetics.cz', // Placeholder if not sure
+    website: 'https://www.podrazilcosmetics.cz',
     instagram: 'podrazilcosmetics',
     address: 'Praha 8',
   },
@@ -88,6 +89,7 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
       isDefault: b.is_default,
       platform: b.platform || 'reservio',
       tokenEnvVar: b.token_env_var,
+      token: b.token_secret, // This matches the new Column Tomas will add
       googleRating: b.google_rating,
       imageUrl: b.image_url,
       website: b.website,
@@ -99,12 +101,12 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
   }
 };
 
-export const getBusinessesByCategory = async (category: 'barbershop' | 'physiotherapy'): Promise<Business[]> => {
+export const getBusinessesByCategory = async (category: 'barbershop' | 'physiotherapy' | 'cosmetics'): Promise<Business[]> => {
   const all = await getAllBusinesses();
   return all.filter(b => b.category === category);
 };
 
-export const getDefaultBusiness = async (category: 'barbershop' | 'physiotherapy'): Promise<Business> => {
+export const getDefaultBusiness = async (category: 'barbershop' | 'physiotherapy' | 'cosmetics'): Promise<Business> => {
   const categoryBusinesses = await getBusinessesByCategory(category);
   return categoryBusinesses.find(b => b.isDefault) || categoryBusinesses[0];
 };

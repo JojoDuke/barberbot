@@ -1,4 +1,4 @@
-import { businesses, type Business } from '../../../config/businesses';
+import { getBusinessById, type Business } from '../../../config/businesses';
 
 interface ReservioRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -10,10 +10,16 @@ export class ReservioClient {
   private baseUrl = 'https://api.reservio.com/v2';
 
   private getToken(business: Business): string {
-    const token = process.env[business.tokenEnvVar];
+    // 1. Try token directly from DB/config
+    if (business.token) return business.token;
+
+    // 2. Fallback to Env Var
+    const envVar = business.tokenEnvVar;
+    const token = envVar ? process.env[envVar] : undefined;
+
     if (!token) {
       throw new Error(
-        `Missing Reservio token for ${business.name}. Please set ${business.tokenEnvVar} in .env file`
+        `Missing Reservio token for ${business.name}. Please set it in Supabase or ${envVar} in .env`
       );
     }
     return token;
@@ -62,7 +68,7 @@ export class ReservioClient {
 
   // Business methods
   async getBusiness(businessId: string) {
-    const business = Object.values(businesses).find(b => b.id === businessId);
+    const business = await getBusinessById(businessId);
     if (!business) {
       throw new Error(`Business with ID ${businessId} not found in configuration`);
     }
@@ -72,7 +78,7 @@ export class ReservioClient {
 
   // Services methods
   async getServices(businessId: string) {
-    const business = Object.values(businesses).find(b => b.id === businessId);
+    const business = await getBusinessById(businessId);
     if (!business) {
       throw new Error(`Business with ID ${businessId} not found in configuration`);
     }
@@ -88,7 +94,7 @@ export class ReservioClient {
     to: string,
     resourceId?: string
   ) {
-    const business = Object.values(businesses).find(b => b.id === businessId);
+    const business = await getBusinessById(businessId);
     if (!business) {
       throw new Error(`Business with ID ${businessId} not found in configuration`);
     }
@@ -123,7 +129,7 @@ export class ReservioClient {
       note?: string;
     }
   ) {
-    const business = Object.values(businesses).find(b => b.id === businessId);
+    const business = await getBusinessById(businessId);
     if (!business) {
       throw new Error(`Business with ID ${businessId} not found in configuration`);
     }

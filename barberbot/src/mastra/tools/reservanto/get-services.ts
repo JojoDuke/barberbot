@@ -5,7 +5,9 @@ import { getReservantoClient } from './client';
 export const getReservantoServicesTool = createTool({
     id: 'get-reservanto-services',
     description: 'Get list of services offered by the Reservanto business',
-    inputSchema: z.object({}),
+    inputSchema: z.object({
+        businessId: z.string().describe('The Reservanto business ID'),
+    }),
     outputSchema: z.object({
         services: z.array(z.object({
             id: z.number(),
@@ -16,8 +18,8 @@ export const getReservantoServicesTool = createTool({
             currency: z.string(),
         })),
     }),
-    execute: async () => {
-        const client = getReservantoClient();
+    execute: async ({ context }) => {
+        const client = await getReservantoClient(context.businessId);
         const response: any = await client.getServices();
 
         const serviceList = response.BookingServices || response.Items || [];

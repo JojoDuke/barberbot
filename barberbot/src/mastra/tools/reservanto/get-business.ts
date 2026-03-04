@@ -1,12 +1,14 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { getReservantoClient } from './client';
-import { businesses } from '../../../config/businesses';
+import { businesses, getBusinessById } from '../../../config/businesses';
 
 export const getReservantoBusinessInfoTool = createTool({
     id: 'get-reservanto-business-info',
     description: 'Get information about a Reservanto business including name, contact info, and address',
-    inputSchema: z.object({}),
+    inputSchema: z.object({
+        businessId: z.string().describe('The Reservanto business ID'),
+    }),
     outputSchema: z.object({
         name: z.string(),
         email: z.string(),
@@ -16,20 +18,20 @@ export const getReservantoBusinessInfoTool = createTool({
         address: z.string().optional(),
         googleRating: z.number().optional(),
     }),
-    execute: async () => {
-        const client = getReservantoClient();
+    execute: async ({ context }) => {
+        const client = await getReservantoClient(context.businessId);
         const response: any = await client.getMerchantInfo();
         const merchant = response.Result || {};
-        const configBusiness = businesses.podrazilCosmetics;
+        const configBusiness = await getBusinessById(context.businessId);
 
         return {
-            name: merchant.Name || configBusiness.name || 'Podrazil Cosmetics',
+            name: merchant.Name || configBusiness?.name || 'Podrazil Cosmetics',
             email: merchant.ContactEmail || '',
             phone: merchant.ContactPhone || '',
-            website: merchant.Web || configBusiness.website,
-            instagram: configBusiness.instagram,
-            address: configBusiness.address,
-            googleRating: configBusiness.googleRating,
+            website: merchant.Web || configBusiness?.website,
+            instagram: configBusiness?.instagram,
+            address: configBusiness?.address,
+            googleRating: configBusiness?.googleRating,
         };
     },
 });

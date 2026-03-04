@@ -1,13 +1,14 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { reservioClient } from './client';
+import { getReservantoClient } from '../reservanto/client';
 import { getBusinessesByCategory } from '../../../config/businesses';
 
 export const getAllBusinessesServicesTool = createTool({
   id: 'get-all-businesses-services',
-  description: 'Get all businesses in a category with their services. Use this when user asks about barbershops or physiotherapy in general.',
+  description: 'Get all businesses in a category with their services. Use this when user asks about barbershops, physiotherapy, or cosmetics in general.',
   inputSchema: z.object({
-    category: z.enum(['barbershop', 'physiotherapy']).describe('The business category'),
+    category: z.enum(['barbershop', 'physiotherapy', 'cosmetics']).describe('The business category'),
     minRating: z.number().optional().describe('Minimum Google rating to filter businesses'),
   }),
   outputSchema: z.object({
@@ -22,7 +23,7 @@ export const getAllBusinessesServicesTool = createTool({
         imageUrl: z.string().optional(),
         services: z.array(
           z.object({
-            id: z.string(),
+            id: z.string().or(z.number()),
             name: z.string(),
             durationMinutes: z.number(),
             cost: z.number(),
@@ -32,7 +33,7 @@ export const getAllBusinessesServicesTool = createTool({
     ),
   }),
   execute: async ({ context }) => {
-    let categoryBusinesses = await getBusinessesByCategory(context.category);
+    let categoryBusinesses = await getBusinessesByCategory(context.category as any);
 
     if (context.minRating) {
       categoryBusinesses = categoryBusinesses.filter(
@@ -43,30 +44,55 @@ export const getAllBusinessesServicesTool = createTool({
     const businessesWithServices = await Promise.all(
       categoryBusinesses.map(async (business) => {
         try {
-          const [servicesResponse, businessResponse]: [any, any] = await Promise.all([
-            reservioClient.getServices(business.id),
-            reservioClient.getBusiness(business.id),
-          ]);
+          if (business.platform === 'reservanto') {
+            const client = await getReservantoClient(business.id);
+            const servicesResponse: any = await client.getServices();
+            const serviceList = servicesResponse.BookingServices || servicesResponse.Items || [];
 
-          const services = (servicesResponse.data || []).map((service: any) => ({
-            id: service.id,
-            name: service.attributes.name,
-            durationMinutes: Math.round(service.attributes.duration / 60),
-            cost: service.attributes.cost,
-          }));
+            const services = serviceList.map((s: any) => ({
+              id: s.Id || s.BookingServiceId,
+              name: s.Name,
+              durationMinutes: s.Duration,
+              cost: s.Price || 0,
+            }));
 
-          const address = business.address || businessResponse.data?.attributes?.street || '';
+            return {
+              id: business.id,
+              name: business.name,
+              address: business.address,
+              website: business.website,
+              instagram: business.instagram,
+              googleRating: business.googleRating,
+              imageUrl: business.imageUrl,
+              services,
+            };
+          } else {
+            // Reservio
+            const [servicesResponse, businessResponse]: [any, any] = await Promise.all([
+              reservioClient.getServices(business.id),
+              reservioClient.getBusiness(business.id),
+            ]);
 
-          return {
-            id: business.id,
-            name: business.name,
-            address,
-            website: business.website,
-            instagram: business.instagram,
-            googleRating: business.googleRating,
-            imageUrl: business.imageUrl,
-            services,
-          };
+            const services = (servicesResponse.data || []).map((service: any) => ({
+              id: service.id,
+              name: service.attributes.name,
+              durationMinutes: Math.round(service.attributes.duration / 60),
+              cost: service.attributes.cost,
+            }));
+
+            const address = business.address || businessResponse.data?.attributes?.street || '';
+
+            return {
+              id: business.id,
+              name: business.name,
+              address,
+              website: business.website,
+              instagram: business.instagram,
+              googleRating: business.googleRating,
+              imageUrl: business.imageUrl,
+              services,
+            };
+          }
         } catch (error) {
           console.error(`Error fetching data for ${business.name}:`, error);
           return {

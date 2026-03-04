@@ -7,6 +7,7 @@ export const createReservantoBookingTool = createTool({
     id: 'create-reservanto-booking',
     description: 'Create a new booking in Reservanto',
     inputSchema: z.object({
+        businessId: z.string().describe('The Reservanto business ID'),
         firstName: z.string(),
         lastName: z.string(),
         email: z.string().optional(),
@@ -22,7 +23,7 @@ export const createReservantoBookingTool = createTool({
         message: z.string(),
     }),
     execute: async ({ context }) => {
-        const client = getReservantoClient();
+        const client = await getReservantoClient(context.businessId);
 
         // 1. Find or create customer — now returns a number (customerId) directly
         const customerId = await client.findOrCreateCustomer({
