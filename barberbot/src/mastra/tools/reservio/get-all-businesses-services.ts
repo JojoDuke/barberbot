@@ -20,7 +20,6 @@ export const getAllBusinessesServicesTool = createTool({
         website: z.string().optional(),
         instagram: z.string().optional(),
         googleRating: z.number().optional(),
-        imageUrl: z.string().optional(),
         services: z.array(
           z.object({
             id: z.string().or(z.number()),
@@ -46,7 +45,11 @@ export const getAllBusinessesServicesTool = createTool({
         try {
           if (business.platform === 'reservanto') {
             const client = await getReservantoClient(business.id);
-            const servicesResponse: any = await client.getServices();
+            const [servicesResponse, merchantResponse]: [any, any] = await Promise.all([
+              client.getServices(),
+              client.getMerchantInfo(),
+            ]);
+
             const serviceList = servicesResponse.BookingServices || servicesResponse.Items || [];
 
             const services = serviceList.map((s: any) => ({
@@ -56,14 +59,18 @@ export const getAllBusinessesServicesTool = createTool({
               cost: s.Price || 0,
             }));
 
+            const merchant = merchantResponse.Result || {};
+            const address = merchant.MailingAddress
+              ? `${merchant.MailingAddress.Street}, ${merchant.MailingAddress.City}`
+              : undefined;
+
             return {
               id: business.id,
               name: business.name,
-              address: business.address,
+              address,
               website: business.website,
               instagram: business.instagram,
               googleRating: business.googleRating,
-              imageUrl: business.imageUrl,
               services,
             };
           } else {
@@ -80,7 +87,7 @@ export const getAllBusinessesServicesTool = createTool({
               cost: service.attributes.cost,
             }));
 
-            const address = business.address || businessResponse.data?.attributes?.street || '';
+            const address = businessResponse.data?.attributes?.street || '';
 
             return {
               id: business.id,
@@ -89,7 +96,6 @@ export const getAllBusinessesServicesTool = createTool({
               website: business.website,
               instagram: business.instagram,
               googleRating: business.googleRating,
-              imageUrl: business.imageUrl,
               services,
             };
           }
@@ -98,7 +104,7 @@ export const getAllBusinessesServicesTool = createTool({
           return {
             id: business.id,
             name: business.name,
-            address: business.address || '',
+            address: '',
             website: business.website,
             instagram: business.instagram,
             googleRating: business.googleRating,

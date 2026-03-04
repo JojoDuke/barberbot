@@ -308,8 +308,8 @@ export async function getReservantoClient(businessId: string): Promise<Reservant
     const business = await getBusinessById(businessId);
     if (!business) throw new Error(`Business ${businessId} not found`);
 
-    const ltt = business.token || (business.tokenEnvVar ? process.env[business.tokenEnvVar] : undefined);
-    if (!ltt) throw new Error(`Missing Reservanto LTT/token for ${business.name}.`);
+    const ltt = process.env[business.tokenEnvVar];
+    if (!ltt) throw new Error(`Missing Reservanto LTT/token for ${business.name}. Please set ${business.tokenEnvVar} in .env file`);
 
     return new ReservantoClient(ltt);
 }

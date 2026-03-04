@@ -10,16 +10,12 @@ export class ReservioClient {
   private baseUrl = 'https://api.reservio.com/v2';
 
   private getToken(business: Business): string {
-    // 1. Try token directly from DB/config
-    if (business.token) return business.token;
-
-    // 2. Fallback to Env Var
     const envVar = business.tokenEnvVar;
-    const token = envVar ? process.env[envVar] : undefined;
+    const token = process.env[envVar];
 
     if (!token) {
       throw new Error(
-        `Missing Reservio token for ${business.name}. Please set it in Supabase or ${envVar} in .env`
+        `Missing Reservio token for ${business.name}. Please set ${envVar} in .env file`
       );
     }
     return token;

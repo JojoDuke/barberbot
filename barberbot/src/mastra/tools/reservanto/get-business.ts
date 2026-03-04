@@ -24,13 +24,17 @@ export const getReservantoBusinessInfoTool = createTool({
         const merchant = response.Result || {};
         const configBusiness = await getBusinessById(context.businessId);
 
+        const address = merchant.MailingAddress
+            ? `${merchant.MailingAddress.Street}, ${merchant.MailingAddress.City}`
+            : undefined;
+
         return {
             name: merchant.Name || configBusiness?.name || 'Podrazil Cosmetics',
             email: merchant.ContactEmail || '',
             phone: merchant.ContactPhone || '',
             website: merchant.Web || configBusiness?.website,
             instagram: configBusiness?.instagram,
-            address: configBusiness?.address,
+            address: address,
             googleRating: configBusiness?.googleRating,
         };
     },
