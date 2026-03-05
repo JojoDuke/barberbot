@@ -87,12 +87,18 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
   }
 };
 
-export const getBusinessesByCategory = async (category: 'barbershop' | 'physiotherapy' | 'cosmetics'): Promise<Business[]> => {
+export const getAllCategories = async (): Promise<string[]> => {
+  const all = await getAllBusinesses();
+  const categories = all.map(b => b.category);
+  return Array.from(new Set(categories));
+};
+
+export const getBusinessesByCategory = async (category: string): Promise<Business[]> => {
   const all = await getAllBusinesses();
   return all.filter(b => b.category === category);
 };
 
-export const getDefaultBusiness = async (category: 'barbershop' | 'physiotherapy' | 'cosmetics'): Promise<Business> => {
+export const getDefaultBusiness = async (category: string): Promise<Business> => {
   const categoryBusinesses = await getBusinessesByCategory(category);
   return categoryBusinesses.find(b => b.isDefault) || categoryBusinesses[0];
 };
