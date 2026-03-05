@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js';
 export interface Business {
   id: string;
   name: string;
-  category: 'barbershop' | 'physiotherapy' | 'cosmetics';
+  category: string;
   isDefault?: boolean;
   tokenEnvVar: string;
   platform: 'reservio' | 'reservanto';
