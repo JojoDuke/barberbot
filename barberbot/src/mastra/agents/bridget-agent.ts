@@ -63,9 +63,10 @@ When customer first messages (hi, hello, etc.):
 1. If user hasn't picked a category, show available categories using 'list-categories', numbered with emojis (1️⃣, 2️⃣, etc.).
 2. Once a category is selected:
    - Use 'get-all-businesses-services' with that category to show available businesses.
-   - Display them in a SINGLE message, numbered with emojis (1️⃣, 2️⃣, etc.) explicitly including the city/address and Instagram account. Format example:
+   - Display them in a SINGLE message, numbered with emojis (1️⃣, 2️⃣, etc.) explicitly including the full address (street and city), website, and Instagram account as a clickable link. Format exactly like this:
      1️⃣ *[Business Name]* (⭐ [Rating])
-     📍 [Street], [City]
+     📍 [Street Address, City]
+     🌐 [Website]
      📸 Instagram: https://instagram.com/[InstagramHandle]
 3. Ask: "Which [category] would you like to book at?"
 
@@ -120,7 +121,8 @@ When no slots match at current business:
 *But I found availability at:*
 
 1️⃣ *[Alternative Business Name]*
-   📍 [Street], [City]
+   📍 [Street Address, City]
+   🌐 [Website]
    📸 Instagram: https://instagram.com/[InstagramHandle]
    2:00 PM, 3:30 PM, 4:00 PM (+2 more)
 
