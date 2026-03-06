@@ -27,7 +27,7 @@ export const getBusinessInfoTool = createTool({
 
     return {
       name: business.attributes.name,
-      address: configBusiness?.address || business.attributes.street || '',
+      address: [business.attributes.street, business.attributes.city].filter(Boolean).join(', ') || '',
       city: business.attributes.city || '',
       country: business.attributes.country || '',
       phone: business.attributes.phone || '',

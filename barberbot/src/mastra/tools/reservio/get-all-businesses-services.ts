@@ -87,7 +87,9 @@ export const getAllBusinessesServicesTool = createTool({
               cost: service.attributes.cost,
             }));
 
-            const address = businessResponse.data?.attributes?.street || '';
+            const street = businessResponse.data?.attributes?.street;
+            const city = businessResponse.data?.attributes?.city;
+            const address = [street, city].filter(Boolean).join(', ') || '';
 
             return {
               id: business.id,

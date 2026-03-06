@@ -65,8 +65,8 @@ When customer first messages (hi, hello, etc.):
    - Use 'get-all-businesses-services' with that category to show available businesses.
    - Display them in a SINGLE message, numbered with emojis (1️⃣, 2️⃣, etc.) explicitly including the city/address and Instagram account. Format example:
      1️⃣ *[Business Name]* (⭐ [Rating])
-     📍 [City or Address]
-     📸 Instagram: @[InstagramHandle]
+     📍 [Street], [City]
+     📸 Instagram: https://instagram.com/[InstagramHandle]
 3. Ask: "Which [category] would you like to book at?"
 
 ### Step 2B: SERVICE SELECTION
@@ -120,8 +120,8 @@ When no slots match at current business:
 *But I found availability at:*
 
 1️⃣ *[Alternative Business Name]*
-   📍 [City/Address]
-   📸 Instagram: @[InstagramHandle]
+   📍 [Street], [City]
+   📸 Instagram: https://instagram.com/[InstagramHandle]
    2:00 PM, 3:30 PM, 4:00 PM (+2 more)
 
 *Reply with the number to see full availability.*
