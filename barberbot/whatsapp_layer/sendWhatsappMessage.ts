@@ -268,63 +268,41 @@ app.post('/whatsapp', async (req, res) => {
     const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
     console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
 
-    // Retry logic with timeout
-    const MAX_RETRIES = 2;
-    const TIMEOUT_MS = 30000; // 30 seconds timeout
+    const TIMEOUT_MS = 45000; // 45 seconds timeout
     let fullResponse = '';
-    let lastError: Error | null = null;
 
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        if (attempt > 0) {
-          console.log(`🔄 Retry attempt ${attempt}/${MAX_RETRIES}...`);
-        }
+    try {
+      // Create a timeout promise
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Agent response timeout. The AI is taking too long.')), TIMEOUT_MS);
+      });
 
-        // Create a timeout promise
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Agent response timeout')), TIMEOUT_MS);
-        });
-
-        // Create the agent stream promise
-        const agentPromise = agent.stream(
-          [
-            {
-              role: 'user',
-              content: incomingMessage,
-            },
-          ],
+      // Create the agent stream promise
+      const agentPromise = agent.stream(
+        [
           {
-            resourceId: senderNumber, // This enables conversation memory per user
-            threadId: threadId, // Unique thread ID per user (phone number)
-          }
-        );
-
-        // Race between agent response and timeout
-        const response = await Promise.race([agentPromise, timeoutPromise]);
-
-        console.log('📡 Streaming response...');
-
-        // Accumulate the streamed response
-        fullResponse = '';
-        for await (const chunk of response.textStream) {
-          console.log('📝 Chunk received:', chunk);
-          fullResponse += chunk;
+            role: 'user',
+            content: incomingMessage,
+          },
+        ],
+        {
+          resourceId: senderNumber, // This enables conversation memory per user
+          threadId: threadId, // Unique thread ID per user (phone number)
         }
+      );
 
-        // If we got here, we have a response
-        break;
-      } catch (error) {
-        lastError = error as Error;
-        console.error(`❌ Attempt ${attempt + 1} failed:`, error);
+      // Race between agent response and timeout
+      const response = await Promise.race([agentPromise, timeoutPromise]);
 
-        if (attempt < MAX_RETRIES) {
-          // Wait a bit before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
-        } else {
-          // Last attempt failed, throw the error
-          throw lastError;
-        }
+      console.log('📡 Streaming response...');
+
+      // Accumulate the streamed response
+      for await (const chunk of response.textStream) {
+        fullResponse += chunk;
       }
+    } catch (error) {
+      console.error(`❌ Agent stream failed:`, error);
+      throw error; // Will be caught by the outer catch block
     }
 
     console.log(`🤖 Bot response (length: ${fullResponse.length}):`);
@@ -334,7 +312,7 @@ app.post('/whatsapp', async (req, res) => {
 
     // Check if response is empty
     if (!fullResponse || fullResponse.trim().length === 0) {
-      console.error('⚠️  Agent returned empty response after all retries');
+      console.error('⚠️  Agent returned empty response');
       throw new Error('Agent returned empty response. Please try sending your message again.');
     }
 
