@@ -21,28 +21,45 @@ export const getReservantoAvailabilityTool = createTool({
         const start = new Date(context.startDate);
         const end = new Date(context.endDate);
 
-        let slots: number[] = [];
+        let availableSlots: string[] = [];
 
-        if (context.resourceId) {
-            const res = await client.getAvailableSlots(context.resourceId, context.serviceId, start, end);
-            slots = res.Starts;
-        } else if (context.locationId) {
-            const res = await client.getAvailableSlotsForLocation(context.locationId, context.serviceId, start, end);
-            slots = res.Starts.map(s => s.Start);
-        } else {
-            // If neither resource nor location is provided, we might need a default location
-            // For now, let's fetch locations and use the first one if not provided
+        try {
+            // Recommendation: Always use GetAvailableStartsForLocation as it supports both 
+            // standard services and specific "PlaceRentalLike" (e.g. Squash courts)
             const locations = await client.getLocations();
-            if (locations.Items.length > 0) {
-                const res = await client.getAvailableSlotsForLocation(locations.Items[0].Id, context.serviceId, start, end);
-                slots = res.Starts.map(s => s.Start);
+            const locationId = context.locationId || locations.Items?.[0]?.Id;
+
+            if (locationId) {
+                const res = await client.getAvailableSlotsForLocation(locationId, context.serviceId, start, end);
+
+                // Location response handles multi-resource availability
+                if (res.Starts) {
+                    if (Array.isArray(res.Starts)) {
+                        // Standard list of slots
+                        availableSlots = res.Starts.map(s => new Date((s.Start || s) * 1000).toISOString());
+                    } else if (typeof res.Starts === 'object') {
+                        // Map of resourceId -> timestamps (e.g. for Squash courts)
+                        const allTimestamps = Object.values(res.Starts).flat() as number[];
+                        availableSlots = Array.from(new Set(allTimestamps))
+                            .sort((a, b) => a - b)
+                            .map(s => new Date(s * 1000).toISOString());
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching Reservanto availability for location:', error);
+
+            // Fallback to specific resource if location fails or was explicitly requested
+            if (context.resourceId) {
+                const res = await client.getAvailableSlots(context.resourceId, context.serviceId, start, end);
+                if (res.Starts) {
+                    availableSlots = res.Starts.map(s => new Date(s * 1000).toISOString());
+                }
             }
         }
 
         return {
-            availableSlots: Array.from(new Set(slots))
-                .sort((a, b) => a - b)
-                .map(s => new Date(s * 1000).toISOString()),
+            availableSlots: Array.from(new Set(availableSlots)).sort(),
         };
     },
 });

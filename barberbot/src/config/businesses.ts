@@ -48,16 +48,16 @@ export const staticBusinesses: Record<string, Business> = {
     website: 'https://www.anatomicfitness.cz',
     instagram: 'anatomicfitness',
   },
-  podrazilCosmetics: {
+  licirnaOrganics: {
     id: '24614',
-    name: 'Podrazil Cosmetics',
+    name: 'Líčírna Organics',
     category: 'cosmetics',
     isDefault: false,
     platform: 'reservanto',
-    tokenEnvVar: 'RESERVANTO_LTT',
+    tokenEnvVar: 'RESERVANTO_LTT_LICIRNA',
     googleRating: 4.9,
-    website: 'https://www.podrazilcosmetics.cz',
-    instagram: 'podrazilcosmetics',
+    website: 'https://www.licirna.cz',
+    instagram: 'licirna____organics',
   },
 };
 
@@ -109,7 +109,7 @@ export const getDefaultBusiness = async (category: string): Promise<Business> =>
 
 export const getBusinessById = async (id: string): Promise<Business | undefined> => {
   const all = await getAllBusinesses();
-  return all.find(b => b.id === id);
+  return all.find(b => b.id.trim() === id.trim());
 };
 
 

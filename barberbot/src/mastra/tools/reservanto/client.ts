@@ -277,9 +277,18 @@ export class ReservantoClient {
         }).catch(() => ({}));
 
         // Reservanto returns Customers (not Items) for this endpoint
-        const customerList = searchRes.Customers || searchRes.Items || [];
-        if (customerList.length > 0) {
-            return customerList[0].Id;
+        const customerList = (searchRes.Customers || searchRes.Items || []) as any[];
+
+        // STRICT CHECK: The API might return all customers if no match is found.
+        // We MUST verify that the email or phone actually matches.
+        const matchedCustomer = customerList.find(c => {
+            const emailMatch = params.email && c.Email && c.Email.toLowerCase() === params.email.toLowerCase();
+            const phoneMatch = params.phone && c.Phone && c.Phone.replace(/\s+/g, '') === params.phone.replace(/\s+/g, '');
+            return emailMatch || phoneMatch;
+        });
+
+        if (matchedCustomer) {
+            return matchedCustomer.Id;
         }
 
         // Create new customer
