@@ -21,8 +21,21 @@ export const getReservantoResourcesTool = createTool({
     }),
     execute: async ({ context }) => {
         const client = await getReservantoClient(context.businessId);
-        const response: any = await client.getBookingResources(context.locationId);
 
+        // Resiliency: verify locationId exists for this merchant
+        const locations = await client.getLocations();
+        const locationItems = locations.Items || [];
+
+        let locationId = context.locationId;
+        if (locationId) {
+            const exists = locationItems.find(l => l.Id === locationId);
+            if (!exists) {
+                console.warn(`⚠️ Provided locationId ${locationId} not found, using default ${locationItems[0]?.Id}`);
+                locationId = locationItems[0]?.Id;
+            }
+        }
+
+        const response: any = await client.getBookingResources(locationId);
         const resourceList = response.Items || [];
 
         return {
