@@ -29,12 +29,12 @@ export const getReservantoBusinessInfoTool = createTool({
             : undefined;
 
         return {
-            name: merchant.Name || configBusiness?.name || 'Podrazil Cosmetics',
+            name: merchant.Name || configBusiness?.name || 'Business',
             email: merchant.ContactEmail || '',
             phone: merchant.ContactPhone || '',
             website: merchant.Web || configBusiness?.website,
             instagram: configBusiness?.instagram,
-            address: address,
+            address: configBusiness?.address || address,
             googleRating: configBusiness?.googleRating,
         };
     },

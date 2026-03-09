@@ -59,10 +59,16 @@ export const getAllBusinessesServicesTool = createTool({
               cost: s.Price || 0,
             }));
 
-            const merchant = merchantResponse.Result || {};
-            const address = merchant.MailingAddress
-              ? `${merchant.MailingAddress.Street}, ${merchant.MailingAddress.City}`
-              : undefined;
+            // Prioritize address from our DB (enriched via Google Places)
+            let address = business.address;
+
+            // Fallback to Reservanto Merchant info if missing in our DB
+            if (!address) {
+              const merchant = merchantResponse.Result || {};
+              address = merchant.MailingAddress
+                ? `${merchant.MailingAddress.Street}, ${merchant.MailingAddress.City}`
+                : undefined;
+            }
 
             return {
               id: business.id,
@@ -87,9 +93,15 @@ export const getAllBusinessesServicesTool = createTool({
               cost: service.attributes.cost,
             }));
 
-            const street = businessResponse.data?.attributes?.street || '';
-            const city = businessResponse.data?.attributes?.city || '';
-            const address = [street, city].filter(Boolean).join(', ');
+            // Prioritize address from our DB (enriched via Google Places)
+            let address = business.address;
+
+            // Fallback to Reservio API if missing in our DB
+            if (!address) {
+              const street = businessResponse.data?.attributes?.street || '';
+              const city = businessResponse.data?.attributes?.city || '';
+              address = [street, city].filter(Boolean).join(', ');
+            }
 
             return {
               id: business.id,
@@ -106,7 +118,7 @@ export const getAllBusinessesServicesTool = createTool({
           return {
             id: business.id,
             name: business.name,
-            address: '',
+            address: business.address || '',
             website: business.website,
             instagram: business.instagram,
             googleRating: business.googleRating,
