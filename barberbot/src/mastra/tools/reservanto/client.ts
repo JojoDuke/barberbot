@@ -235,6 +235,48 @@ export class ReservantoClient {
         });
     }
 
+    async getAvailableAppointments(params: {
+        locationId: number;
+        bookingServiceId?: number;
+        intervalStart: Date;
+        intervalEnd: Date;
+    }) {
+        return this.post<{
+            Items: Array<{
+                Id: number;
+                Start: number;
+                End: number;
+                BookingResourceId: number;
+                BookingServiceId: number;
+                Capacity: number;
+                ReservedCount: number;
+            }>;
+        }>('/Classes/GetAvailableAppointments', {
+            LocationId: params.locationId,
+            BookingServiceId: params.bookingServiceId || null,
+            IntervalStart: Math.floor(params.intervalStart.getTime() / 1000),
+            IntervalEnd: Math.floor(params.intervalEnd.getTime() / 1000),
+        });
+    }
+
+    async createClassBooking(params: {
+        appointmentId: number;
+        customerId: number;
+        count?: number;
+        customerNote?: string;
+    }) {
+        return this.post<{
+            AppointmentId: number;
+            CustomerId: number;
+            Status: string;
+        }>('/Classes/CreateBooking', {
+            AppointmentId: params.appointmentId,
+            CustomerId: params.customerId,
+            Count: params.count || 1,
+            CustomerNote: params.customerNote || '',
+        });
+    }
+
     async cancelBooking(appointmentId: number, sendNotification = true) {
         return this.post('/Booking/Cancel', {
             AppointmentId: appointmentId,
