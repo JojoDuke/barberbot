@@ -11,13 +11,12 @@ export const mastra = new Mastra({
   }),
   logger: new PinoLogger({
     name: 'Mastra',
-    level: 'info',
+    level: 'warn',
   }),
   telemetry: {
-    // Telemetry is deprecated and will be removed in the Nov 4th release
     enabled: false,
   },
   observability: {
-    default: { enabled: true },
+    default: { enabled: false },
   },
 });
