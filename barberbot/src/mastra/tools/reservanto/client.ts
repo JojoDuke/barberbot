@@ -95,7 +95,7 @@ export class ReservantoClient {
     // Locations (branches)
     // ──────────────────────────────────────────────
 
-    async getLocations(onlyPublic = true) {
+    async getLocations(onlyPublic = false) {
         return this.post<{
             Items: Array<{
                 Id: number;
@@ -121,7 +121,7 @@ export class ReservantoClient {
     // Booking Resources (employees / chairs)
     // ──────────────────────────────────────────────
 
-    async getBookingResources(locationId?: number, onlyPublic = true) {
+    async getBookingResources(locationId?: number, onlyPublic = false) {
         return this.post<{
             Items: Array<{
                 Id: number;
