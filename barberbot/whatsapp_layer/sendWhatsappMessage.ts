@@ -6,6 +6,7 @@ import twilio from 'twilio';
 import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { mastra } from '../src/mastra/index.js';
 import { supabase } from '../src/lib/supabase.js';
+import { enrichBusinesses } from '../src/scripts/enrich-businesses.js';
 
 dotenv.config();
 
@@ -474,16 +475,36 @@ app.get('/', (req, res) => {
     endpoints: {
       webhook: '/whatsapp',
       status: '/whatsapp/status',
-      health: '/health'
+      health: '/health',
+      enrich: '/webhook/enrich'
     }
   });
+});
+
+// Supabase webhook endpoint for instant enrichment
+app.post('/webhook/enrich', express.json(), async (req, res) => {
+  console.log(`⚡ Received Supabase webhook to enrich business data`);
+  // Add a small delay so we know the database row is fully committed before we query it
+  setTimeout(() => {
+    enrichBusinesses().catch(err => {
+      console.error('❌ Webhook enrichment failed:', err);
+    });
+  }, 1000);
+
+  res.json({ status: 'started' });
 });
 
 app.listen(3000, () => {
   console.log('🚀 Express server listening on port 3000');
   console.log('📲 WhatsApp webhook ready at http://localhost:3000/whatsapp');
+  console.log('⚡ Webhook enrichment ready at http://localhost:3000/webhook/enrich');
   console.log('📊 Status callback ready at http://localhost:3000/whatsapp/status');
   console.log('🤖 Bridget AI Booking Bot is ready!');
+
+  // Run business enrichment on startup (non-blocking)
+  enrichBusinesses().catch(err => {
+    console.error('Failed to run startup enrichment:', err);
+  });
 
   // Check if API keys are set
   const hasOpenAiKey = !!process.env.OPENAI_API_KEY;

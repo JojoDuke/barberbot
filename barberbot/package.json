@@ -11,7 +11,8 @@
     "whatsapp": "tsx whatsapp_layer/sendWhatsappMessage.ts",
     "whatsapp:watch": "tsx watch whatsapp_layer/sendWhatsappMessage.ts",
     "test:sanitizer": "tsx whatsapp_layer/test-message-sanitizer.ts",
-    "seed:businesses": "tsx src/scripts/seed-businesses.ts"
+    "seed:businesses": "tsx src/scripts/seed-businesses.ts",
+    "enrich:businesses": "tsx src/scripts/enrich-businesses.ts"
   },
   "keywords": [],
   "author": "",

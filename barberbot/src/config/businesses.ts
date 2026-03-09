@@ -10,6 +10,8 @@ export interface Business {
   googleRating?: number;
   website?: string;
   instagram?: string;
+  address?: string;
+  placeId?: string;
 }
 
 export const staticBusinesses: Record<string, Business> = {
@@ -81,6 +83,8 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
       googleRating: b.google_rating,
       website: b.website,
       instagram: b.instagram,
+      address: b.address,
+      placeId: b.place_id,
     }));
   } catch (err) {
     return Object.values(staticBusinesses);

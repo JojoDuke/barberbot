@@ -1,0 +1,23 @@
+[
+  {
+    "query": "Osobní Fyzio Trenér",
+    "found": "Fyziotrénink",
+    "address": "8, Vítkova 244, 186 00 Praha 8-Karlín, Czechia",
+    "rating": 5,
+    "id": "ChIJmxKPLb2UC0cRHLTHlALC0dc"
+  },
+  {
+    "query": "Anatomic Fitness Praha",
+    "found": "Anatomic Fitness",
+    "address": "nám. Hrdinů 886/15, Nusle, 140 00 Praha-Praha 4, Czechia",
+    "rating": 5,
+    "id": "ChIJL6hPVcOVC0cR9zmxZhlGvNc"
+  },
+  {
+    "query": "https://www.osobnifyziotrener.cz/",
+    "found": "Anatomic Fitness",
+    "address": "nám. Hrdinů 886/15, Nusle, 140 00 Praha-Praha 4, Czechia",
+    "rating": 5,
+    "id": "ChIJL6hPVcOVC0cR9zmxZhlGvNc"
+  }
+]
