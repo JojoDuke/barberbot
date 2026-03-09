@@ -27,7 +27,19 @@ export const getReservantoAvailabilityTool = createTool({
             // Recommendation: Always use GetAvailableStartsForLocation as it supports both 
             // standard services and specific "PlaceRentalLike" (e.g. Squash courts)
             const locations = await client.getLocations();
-            const locationId = context.locationId || locations.Items?.[0]?.Id;
+            const locationItems = locations.Items || [];
+
+            // If the agent passed a locationId, but it does NOT exist in the merchant's location list,
+            // we should ignore it and use the default location.
+            let locationId = locationItems[0]?.Id;
+            if (context.locationId) {
+                const exists = locationItems.find(l => l.Id === context.locationId);
+                if (exists) {
+                    locationId = context.locationId;
+                } else {
+                    console.warn(`⚠️ Provided locationId ${context.locationId} not found for this merchant. Using default ${locationId}.`);
+                }
+            }
 
             if (locationId) {
                 const res = await client.getAvailableSlotsForLocation(locationId, context.serviceId, start, end);
@@ -45,6 +57,8 @@ export const getReservantoAvailabilityTool = createTool({
                             .map(s => new Date(s * 1000).toISOString());
                     }
                 }
+            } else {
+                console.warn('⚠️ No locations found for this merchant.');
             }
         } catch (error) {
             console.error('Error fetching Reservanto availability for location:', error);

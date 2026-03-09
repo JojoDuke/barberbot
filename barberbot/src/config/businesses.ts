@@ -49,7 +49,7 @@ export const staticBusinesses: Record<string, Business> = {
     instagram: 'anatomicfitness',
   },
   licirnaOrganics: {
-    id: '24614',
+    id: 'e1c1ad9a-ba52-45eb-a8f8-757a9198c284',
     name: 'Líčírna Organics',
     category: 'cosmetics',
     isDefault: false,
