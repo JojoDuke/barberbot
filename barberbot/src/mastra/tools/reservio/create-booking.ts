@@ -4,7 +4,7 @@ import { reservioClient } from './client';
 import { supabase } from '../../../lib/supabase';
 
 export const createBookingTool = createTool({
-  id: 'createReservioBooking',
+  id: 'create-booking',
   description: 'Create a new booking/appointment in Reservio',
   inputSchema: z.object({
     businessId: z.string().describe('The Reservio business ID'),

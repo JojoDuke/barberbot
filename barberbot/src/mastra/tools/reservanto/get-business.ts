@@ -4,7 +4,7 @@ import { getReservantoClient } from './client';
 import { businesses, getBusinessById } from '../../../config/businesses';
 
 export const getReservantoBusinessInfoTool = createTool({
-    id: 'getReservantoBusinessInfo',
+    id: 'get-reservanto-business-info',
     description: 'Get information about a Reservanto business including name, contact info, and address',
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getAllCategories } from '../../../config/businesses';
 
 export const listCategoriesTool = createTool({
-    id: 'listCategories',
+    id: 'list-categories',
     description: 'List all unique business categories available in the system (e.g., barbershop, cosmetics, massage)',
     inputSchema: z.object({}),
     outputSchema: z.object({

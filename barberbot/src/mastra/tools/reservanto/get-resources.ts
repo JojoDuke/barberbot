@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getReservantoClient } from './client';
 
 export const getReservantoResourcesTool = createTool({
-    id: 'getReservantoResources',
+    id: 'get-reservanto-resources',
     description: 'Get list of booking resources (employees/barbers/chairs) for the Reservanto business',
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),

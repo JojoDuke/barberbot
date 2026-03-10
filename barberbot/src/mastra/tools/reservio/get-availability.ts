@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { reservioClient } from './client';
 
 export const getAvailabilityTool = createTool({
-  id: 'getReservioAvailability',
+  id: 'get-availability',
   description: 'Get available time slots for a service on a specific date. Returns slots in Europe/Prague timezone.',
   inputSchema: z.object({
     businessId: z.string().describe('The Reservio business ID'),

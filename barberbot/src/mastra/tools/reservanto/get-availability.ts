@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getReservantoClient } from './client';
 
 export const getReservantoAvailabilityTool = createTool({
-    id: 'getReservantoAvailability',
+    id: 'get-reservanto-availability',
     description: 'Check available booking slots for a service in a given time range',
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),
@@ -48,7 +48,7 @@ export const getReservantoAvailabilityTool = createTool({
                 if (res.Starts) {
                     if (Array.isArray(res.Starts)) {
                         // Standard list of slots
-                        availableSlots = res.Starts.map(s => new Date(((s as any).Start || (s as any)) * 1000).toISOString());
+                        availableSlots = res.Starts.map(s => new Date((s.Start || s) * 1000).toISOString());
                     } else if (typeof res.Starts === 'object') {
                         // Map of resourceId -> timestamps (e.g. for Squash courts)
                         const allTimestamps = Object.values(res.Starts).flat() as number[];
