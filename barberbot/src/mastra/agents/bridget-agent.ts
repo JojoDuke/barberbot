@@ -159,7 +159,7 @@ Success message: ✅ *Booking confirmed!*
 
 Remember: Be helpful, conversational, and guide customers smoothly through booking!
 `,
-  model: 'openai/gpt-5.2-chat-latest',
+  model: 'openai/gpt-5.4-pro',
   tools: {
     getBusinessInfo: getBusinessInfoTool,
     getReservioServices: getServicesTool,
