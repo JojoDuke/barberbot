@@ -173,8 +173,5 @@ Remember: Be helpful, conversational, and guide customers smoothly through booki
     getReservantoResources: getReservantoResourcesTool,
     listCategories: listCategoriesTool,
   },
-  memory: new Memory({
-    storage: sharedStorage,
-  }),
 });
 

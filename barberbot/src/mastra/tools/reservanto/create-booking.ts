@@ -4,7 +4,7 @@ import { getReservantoClient } from './client';
 import { supabase } from '../../../lib/supabase';
 
 export const createReservantoBookingTool = createTool({
-    id: 'create-reservanto-booking',
+    id: 'createReservantoBooking',
     description: 'Create a new booking in Reservanto',
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),
