@@ -80,10 +80,10 @@ When customer first messages:
 `,
   model: 'openai/gpt-5.2-chat-latest',
   tools: {
-    getBusinessInfo: getBusinessInfoTool,
+    getReservioBusinessInfo: getBusinessInfoTool,
     getReservioServices: getServicesTool,
     getReservioAvailability: getAvailabilityTool,
-    createReservioBooking: createBookingTool,
+    getReservioBooking: createBookingTool,
     getAllBusinessesServices: getAllBusinessesServicesTool,
     getReservantoBusinessInfo: getReservantoBusinessInfoTool,
     getReservantoServices: getReservantoServicesTool,
