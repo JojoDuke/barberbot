@@ -14,66 +14,82 @@ export const getReservantoAvailabilityTool = createTool({
         endDate: z.string().describe('ISO date string for interval end'),
     }),
     outputSchema: z.object({
-        availableSlots: z.array(z.string().describe('ISO date strings of available start times')),
+        availableSlots: z.array(z.object({
+            startTime: z.string().describe('ISO date string of available start time'),
+            resourceId: z.number().describe('The specific technical ID of the resource (court/employee) for this slot'),
+        })),
     }),
     execute: async ({ context }) => {
         const client = await getReservantoClient(context.businessId);
         const start = new Date(context.startDate);
         const end = new Date(context.endDate);
 
-        let availableSlots: string[] = [];
+        let slots: Array<{ startTime: string; resourceId: number }> = [];
 
         try {
-            // Recommendation: Always use GetAvailableStartsForLocation as it supports both 
-            // standard services and specific "PlaceRentalLike" (e.g. Squash courts)
             const locations = await client.getLocations();
             const locationItems = locations.Items || [];
 
-            // If the agent passed a locationId, but it does NOT exist in the merchant's location list,
-            // we should ignore it and use the default location.
             let locationId = locationItems[0]?.Id;
             if (context.locationId) {
                 const exists = locationItems.find(l => l.Id === context.locationId);
                 if (exists) {
                     locationId = context.locationId;
-                } else {
-                    console.warn(`⚠️ Provided locationId ${context.locationId} not found for this merchant. Using default ${locationId}.`);
                 }
             }
 
             if (locationId) {
                 const res = await client.getAvailableSlotsForLocation(locationId, context.serviceId, start, end);
 
-                // Location response handles multi-resource availability
                 if (res.Starts) {
                     if (Array.isArray(res.Starts)) {
-                        // Standard list of slots
-                        availableSlots = res.Starts.map(s => new Date(((s as any).Start || s) * 1000).toISOString());
+                        // Standard list of slots { Start: number; BookingResourceId: number }
+                        slots = res.Starts.map(s => ({
+                            startTime: new Date(((s as any).Start || s) * 1000).toISOString(),
+                            resourceId: (s as any).BookingResourceId || context.resourceId || 0
+                        }));
                     } else if (typeof res.Starts === 'object') {
-                        // Map of resourceId -> timestamps (e.g. for Squash courts)
-                        const allTimestamps = Object.values(res.Starts).flat() as number[];
-                        availableSlots = Array.from(new Set(allTimestamps))
-                            .sort((a, b) => a - b)
-                            .map(s => new Date(s * 1000).toISOString());
+                        // Map of resourceId -> timestamps (Squash courts)
+                        Object.entries(res.Starts).forEach(([rId, timestamps]) => {
+                            const resourceId = parseInt(rId);
+                            (timestamps as number[]).forEach(t => {
+                                slots.push({
+                                    startTime: new Date(t * 1000).toISOString(),
+                                    resourceId
+                                });
+                            });
+                        });
                     }
                 }
-            } else {
-                console.warn('⚠️ No locations found for this merchant.');
             }
         } catch (error) {
-            console.error('Error fetching Reservanto availability for location:', error);
-
-            // Fallback to specific resource if location fails or was explicitly requested
+            console.error('Error fetching Reservanto availability:', error);
             if (context.resourceId) {
                 const res = await client.getAvailableSlots(context.resourceId, context.serviceId, start, end);
                 if (res.Starts) {
-                    availableSlots = res.Starts.map(s => new Date(s * 1000).toISOString());
+                    slots = res.Starts.map(s => ({
+                        startTime: new Date(s * 1000).toISOString(),
+                        resourceId: context.resourceId!
+                    }));
                 }
             }
         }
 
+        // De-duplicate: Keep only one resource per time slot for the AI's simplicity,
+        // but ensure we have a valid resourceId for that time.
+        const uniqueSlotsMap = new Map<string, number>();
+        slots.forEach(s => {
+            if (!uniqueSlotsMap.has(s.startTime)) {
+                uniqueSlotsMap.set(s.startTime, s.resourceId);
+            }
+        });
+
+        const finalSlots = Array.from(uniqueSlotsMap.entries())
+            .map(([startTime, resourceId]) => ({ startTime, resourceId }))
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+
         return {
-            availableSlots: Array.from(new Set(availableSlots)).sort(),
+            availableSlots: finalSlots,
         };
     },
 });

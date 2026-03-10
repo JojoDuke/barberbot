@@ -69,6 +69,7 @@ When customer first messages:
 1. Parse time preferences (morning/afternoon/etc.).
 2. Use 'getReservioAvailability' or 'getReservantoAvailability'.
 3. Display max 6 slots: 1️⃣ 9:00 - 9:30...
+4. Keep track of the 'resourceId' returned in availability for the final booking.
 
 ### Step 6: CROSS-SHOP CHECK
 - If no slots, check other businesses in the same category.

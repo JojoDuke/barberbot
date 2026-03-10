@@ -348,6 +348,7 @@ export class ReservantoClient {
         // API may return Result.Id or Customers[0].Id or direct Id
         const newId =
             createRes?.Result?.Id ??
+            createRes?.Customer?.Id ??
             createRes?.Customers?.[0]?.Id ??
             createRes?.Id;
 

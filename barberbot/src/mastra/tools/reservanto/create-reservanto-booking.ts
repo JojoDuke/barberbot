@@ -13,7 +13,7 @@ export const createReservantoBookingTool = createTool({
         email: z.string().optional(),
         phone: z.string().optional(),
         serviceId: z.number(),
-        resourceId: z.number(),
+        resourceId: z.number().optional().describe('Technical ID of the court or employee. If missing, we will try to find the first available one.'),
         startTime: z.string().describe('ISO date string for the booking start'),
         note: z.string().optional(),
     }),
@@ -33,15 +33,53 @@ export const createReservantoBookingTool = createTool({
             phone: context.phone,
         });
 
-        // 2. Create booking
+        // 2. Resource Discovery (if missing)
+        let resourceId = context.resourceId;
         const bookingStart = new Date(context.startTime);
+
+        if (!resourceId) {
+            console.log('🔍 No resourceId provided, attempting auto-discovery...');
+            const locations = await client.getLocations();
+            const locId = locations.Items?.[0]?.Id;
+
+            if (locId) {
+                const availability = await client.getAvailableSlotsForLocation(
+                    locId,
+                    context.serviceId,
+                    new Date(bookingStart.getTime() - 1000),
+                    new Date(bookingStart.getTime() + 1000)
+                );
+
+                if (availability.Starts && Array.isArray(availability.Starts)) {
+                    resourceId = (availability.Starts[0] as any).BookingResourceId;
+                } else if (availability.Starts && typeof availability.Starts === 'object') {
+                    // Map of resourceId -> times
+                    const entries = Object.entries(availability.Starts);
+                    if (entries.length > 0) {
+                        resourceId = parseInt(entries[0][0]);
+                    }
+                }
+            }
+        }
+
+        if (!resourceId) {
+            // Fallback: just try to get any resource for this service
+            const resources = await client.getBookingResources();
+            resourceId = resources.Items?.find(r => r.BookingServiceIds.includes(context.serviceId))?.Id;
+        }
+
+        if (!resourceId) {
+            throw new Error(`Could not determine a valid ResourceId for service ${context.serviceId}.`);
+        }
+
+        // 3. Create booking
         let booking: any;
         let bookingId: number = 0;
         let status: string = 'Confirmed';
 
         try {
             booking = await client.createBooking({
-                bookingResourceId: context.resourceId,
+                bookingResourceId: resourceId,
                 bookingServiceId: context.serviceId,
                 customerId: customerId,
                 bookingStart,
@@ -75,7 +113,7 @@ export const createReservantoBookingTool = createTool({
                     const targetUnix = Math.floor(bookingStart.getTime() / 1000);
                     const matchedAppt = apptsRes.Items?.find(item =>
                         item.Start === targetUnix &&
-                        (context.resourceId ? item.BookingResourceId === context.resourceId : true)
+                        (resourceId ? item.BookingResourceId === resourceId : true)
                     );
 
                     if (matchedAppt) {
