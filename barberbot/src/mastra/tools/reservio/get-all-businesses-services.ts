@@ -5,11 +5,11 @@ import { getReservantoClient } from '../reservanto/client';
 import { getBusinessesByCategory } from '../../../config/businesses';
 
 export const getAllBusinessesServicesTool = createTool({
-  id: 'get-all-businesses-services',
-  description: 'Get all businesses in a category with their services. Use this when user asks about barbershops, physiotherapy, or cosmetics in general.',
+  id: 'reservio_get_all_businesses_services',
+  description: 'Search for businesses and services by category or name',
   inputSchema: z.object({
-    category: z.string().describe('The business category (e.g. barbershop, massage, etc.)'),
-    minRating: z.number().optional().describe('Minimum Google rating to filter businesses'),
+    category: z.coerce.string().optional().describe('The category to filter by (e.g., "barber")'),
+    query: z.string().optional().describe('Optional search query for business name'),
   }),
   outputSchema: z.object({
     businesses: z.array(

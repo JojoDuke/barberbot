@@ -127,6 +127,9 @@ async function sendWhatsAppMessageRest(to: string, from: string, body: string, m
   }
 }
 
+// Track active threads to prevent parallel processing for the same user
+const processingThreads = new Set<string>();
+
 app.post('/whatsapp', async (req, res) => {
   const twiml = new MessagingResponse();
 
@@ -140,6 +143,15 @@ app.post('/whatsapp', async (req, res) => {
     console.log(`   From: ${senderNumber}`);
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
+
+    // Thread locking to prevent duplicate tool ID crashes
+    if (processingThreads.has(senderNumber)) {
+      console.warn(`⚠️  Thread ${senderNumber} is already being processed. Ignoring overlapping message.`);
+      // Optional: Respond that we're still thinking, but for WhatsApp UX it's usually better to just ignore or wait.
+      // We respond with empty TwiML to acknowledge receipt to Twilio without sending a message to user.
+      res.type('text/xml').send(new MessagingResponse().toString());
+      return;
+    }
 
     // Background: Ensure user exists in Supabase 'users' table
     (async () => {
@@ -168,6 +180,16 @@ app.post('/whatsapp', async (req, res) => {
     })();
 
     const normalizedMsg = incomingMessage.trim().toLowerCase();
+
+    // 0. Handle Thread Management (CRITICAL FIX)
+    if (normalizedMsg === '!clear' || normalizedMsg === '!reset') {
+      console.log(`🧹 Clearing thread for ${senderNumber}`);
+      const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`;
+      await (mastra.storage as any)?.deleteThread({ threadId });
+      twiml.message('✅ Your conversation history has been cleared. You can start a new booking now.');
+      res.type('text/xml').send(twiml.toString());
+      return;
+    }
 
     // 1. Handle Broadcast Confirmation State
     if (userStates.get(senderNumber) === 'AWAITING_BROADCAST_CONFIRM') {
@@ -256,23 +278,26 @@ app.post('/whatsapp', async (req, res) => {
       });
     }
 
-    // Get Bridget, the booking agent
-    const agent = mastra.getAgent('bridgetAgent');
-
-    if (!agent) {
-      throw new Error('Bridget agent not found');
-    }
-
-    // Call the agent with memory context (using phone number as resourceId)
-    console.log('🔄 Calling Bridget...');
-    // Use phone number as threadId to ensure each user has their own conversation thread
-    const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
-    console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
-
-    const TIMEOUT_MS = 45000; // 45 seconds timeout
-    let fullResponse = '';
+    // Register this thread as being processed
+    processingThreads.add(senderNumber);
 
     try {
+      // Get Bridget, the booking agent
+      const agent = mastra.getAgent('bridgetAgent');
+
+      if (!agent) {
+        throw new Error('Bridget agent not found');
+      }
+
+      // Call the agent with memory context (using phone number as resourceId)
+      console.log('🔄 Calling Bridget...');
+      // Use phone number as threadId to ensure each user has their own conversation thread
+      const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
+      console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
+
+      const TIMEOUT_MS = 60000; // Increase to 60s for stability
+      let fullResponse = '';
+
       // Create a timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => reject(new Error('Agent response timeout. The AI is taking too long.')), TIMEOUT_MS);
@@ -301,120 +326,124 @@ app.post('/whatsapp', async (req, res) => {
       for await (const chunk of response.textStream) {
         fullResponse += chunk;
       }
-    } catch (error) {
-      console.error(`❌ Agent stream failed:`, error);
-      throw error; // Will be caught by the outer catch block
-    }
 
-    console.log(`🤖 Bot response (length: ${fullResponse.length}):`);
-    console.log('───────────────────────────────────────');
-    console.log(fullResponse);
-    console.log('───────────────────────────────────────');
+      console.log(`🤖 Bot response (length: ${fullResponse.length}):`);
+      console.log('───────────────────────────────────────');
+      console.log(fullResponse);
+      console.log('───────────────────────────────────────');
 
-    // Check if response is empty
-    if (!fullResponse || fullResponse.trim().length === 0) {
-      console.error('⚠️  Agent returned empty response');
-      throw new Error('Agent returned empty response. Please try sending your message again.');
-    }
-
-    // Sanitize the response for WhatsApp
-    const sanitizedResponse = sanitizeWhatsAppMessage(fullResponse);
-    console.log(`✨ Sanitized response (length: ${sanitizedResponse.length}):`);
-    console.log('───────────────────────────────────────');
-    console.log(sanitizedResponse);
-    console.log('───────────────────────────────────────');
-
-    // Validate before sending
-    if (!sanitizedResponse || sanitizedResponse.trim().length === 0) {
-      throw new Error('Sanitized response is empty');
-    }
-
-    // Check if response contains SPLIT_MESSAGE blocks
-    const splitMessageRegex = /\[SPLIT_MESSAGE\]([\s\S]*?)\[\/SPLIT_MESSAGE\]/g;
-    const splitMatches = Array.from(fullResponse.matchAll(splitMessageRegex));
-
-    if (splitMatches.length > 0) {
-      // Multiple messages mode - send each SPLIT_MESSAGE block as a separate message
-      console.log(`📨 Detected ${splitMatches.length} split messages - switching to REST API for sequencing`);
-
-      // First, send any content before the first SPLIT_MESSAGE block
-      const firstSplitIndex = fullResponse.indexOf('[SPLIT_MESSAGE]');
-      if (firstSplitIndex > 0) {
-        const introText = fullResponse.substring(0, firstSplitIndex).trim();
-        if (introText) {
-          const sanitizedIntro = sanitizeWhatsAppMessage(introText);
-          if (sanitizedIntro) {
-            await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedIntro);
-            await sleep(1000); // 1 second delay
-          }
-        }
+      // Check if response is empty
+      if (!fullResponse || fullResponse.trim().length === 0) {
+        console.error('⚠️  Agent returned empty response');
+        throw new Error('Agent returned empty response. Please try sending your message again.');
       }
 
-      // Send each SPLIT_MESSAGE block as a separate message
-      for (let i = 0; i < splitMatches.length; i++) {
-        const match = splitMatches[i];
-        const blockContent = match[1].trim();
+      // Sanitize the response for WhatsApp
+      const sanitizedResponse = sanitizeWhatsAppMessage(fullResponse);
+      console.log(`✨ Sanitized response (length: ${sanitizedResponse.length}):`);
+      console.log('───────────────────────────────────────');
+      console.log(sanitizedResponse);
+      console.log('───────────────────────────────────────');
 
-        // Extract image URL from this block
-        const imageMatch = blockContent.match(/\[IMAGE:\s*(.*?)\]/);
-        const imageUrl = imageMatch ? imageMatch[1].trim() : null;
+      // Validate before sending
+      if (!sanitizedResponse || sanitizedResponse.trim().length === 0) {
+        throw new Error('Sanitized response is empty');
+      }
 
-        // Remove IMAGE tag from text
-        const textContent = blockContent.replace(/\[IMAGE:.*?\]/g, '').trim();
+      // Check if response contains SPLIT_MESSAGE blocks
+      const splitMessageRegex = /\[SPLIT_MESSAGE\]([\s\S]*?)\[\/SPLIT_MESSAGE\]/g;
+      const splitMatches = Array.from(fullResponse.matchAll(splitMessageRegex));
 
-        if (textContent) {
-          const sanitizedBlock = sanitizeWhatsAppMessage(textContent);
+      if (splitMatches.length > 0) {
+        // Multiple messages mode - send each SPLIT_MESSAGE block as a separate message
+        console.log(`📨 Detected ${splitMatches.length} split messages - switching to REST API for sequencing`);
 
-          let finalImageUrl: string | undefined = undefined;
-          if (imageUrl) {
-            finalImageUrl = imageUrl;
-            if (imageUrl.startsWith('/')) {
-              finalImageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+        // First, send any content before the first SPLIT_MESSAGE block
+        const firstSplitIndex = fullResponse.indexOf('[SPLIT_MESSAGE]');
+        if (firstSplitIndex > 0) {
+          const introText = fullResponse.substring(0, firstSplitIndex).trim();
+          if (introText) {
+            const sanitizedIntro = sanitizeWhatsAppMessage(introText);
+            if (sanitizedIntro) {
+              await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedIntro);
+              await sleep(1000); // 1 second delay
             }
           }
+        }
 
-          console.log(`📤 Sending split message ${i + 1}/${splitMatches.length} via REST API...`);
-          await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedBlock, finalImageUrl);
+        // Send each SPLIT_MESSAGE block as a separate message
+        for (let i = 0; i < splitMatches.length; i++) {
+          const match = splitMatches[i];
+          const blockContent = match[1].trim();
 
-          // Delay between messages
-          // If it's the second to last message, add a longer delay for the final question
-          if (i < splitMatches.length - 1) {
-            const delay = i === splitMatches.length - 2 ? 4000 : 2500;
-            console.log(`- Waiting ${delay}ms before next message...`);
-            await sleep(delay);
+          // Extract image URL from this block
+          const imageMatch = blockContent.match(/\[IMAGE:\s*(.*?)\]/);
+          const imageUrl = imageMatch ? imageMatch[1].trim() : null;
+
+          // Remove IMAGE tag from text
+          const textContent = blockContent.replace(/\[IMAGE:.*?\]/g, '').trim();
+
+          if (textContent) {
+            const sanitizedBlock = sanitizeWhatsAppMessage(textContent);
+
+            let finalImageUrl: string | undefined = undefined;
+            if (imageUrl) {
+              finalImageUrl = imageUrl;
+              if (imageUrl.startsWith('/')) {
+                finalImageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+              }
+            }
+
+            console.log(`📤 Sending split message ${i + 1}/${splitMatches.length} via REST API...`);
+            await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedBlock, finalImageUrl);
+
+            // Delay between messages
+            // If it's the second to last message, add a longer delay for the final question
+            if (i < splitMatches.length - 1) {
+              const delay = i === splitMatches.length - 2 ? 4000 : 2500;
+              console.log(`- Waiting ${delay}ms before next message...`);
+              await sleep(delay);
+            }
           }
         }
-      }
 
-      // We respond with empty TwiML since we sent everything via REST API
-      console.log('✅ All split messages queued via REST API');
-    } else {
-      // Single message mode (original behavior)
-      const message = twiml.message('');
-      message.body(sanitizedResponse);
+        // We respond with empty TwiML since we sent everything via REST API
+        console.log('✅ All split messages queued via REST API');
+      } else {
+        // Single message mode (original behavior)
+        const message = twiml.message('');
+        message.body(sanitizedResponse);
 
-      // Extract image URL if present in original response
-      const imageMatch = fullResponse.match(/\[IMAGE:\s*(.*?)\]/);
-      if (imageMatch && imageMatch[1]) {
-        let imageUrl = imageMatch[1].trim();
+        // Extract image URL if present in original response
+        const imageMatch = fullResponse.match(/\[IMAGE:\s*(.*?)\]/);
+        if (imageMatch && imageMatch[1]) {
+          let imageUrl = imageMatch[1].trim();
 
-        // If it's a relative path, assume simple local serving (though we are moving to external now)
-        if (imageUrl.startsWith('/')) {
-          imageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+          // If it's a relative path, assume simple local serving (though we are moving to external now)
+          if (imageUrl.startsWith('/')) {
+            imageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
+          }
+
+          console.log(`🖼️  Attaching image: ${imageUrl}`);
+          message.media(imageUrl);
         }
-
-        console.log(`🖼️  Attaching image: ${imageUrl}`);
-        message.media(imageUrl);
       }
+    } catch (error) {
+      console.error('❌ Error processing message:');
+      console.error(error);
+
+      const errorMessage = 'Sorry, I encountered an error. Please try again in a moment.';
+      twiml.message(errorMessage);
+    } finally {
+      // ALWAYS unlock the thread so the user can send another message
+      console.log(`🔓 Releasing thread for ${senderNumber}`);
+      processingThreads.delete(senderNumber);
     }
 
     console.log('✅ TwiML response prepared successfully');
-  } catch (error) {
-    console.error('❌ Error processing message:');
-    console.error(error);
-
-    const errorMessage = 'Sorry, I encountered an error. Please try again in a moment.';
-    twiml.message(errorMessage);
+  } catch (outerError) {
+    console.error('❌ Outer catch caught crash:', outerError);
+    twiml.message('Sorry, something went wrong on our end.');
   }
 
   // Set proper headers and send response
@@ -486,7 +515,7 @@ app.post('/webhook/enrich', express.json(), async (req, res) => {
   console.log(`⚡ Received Supabase webhook to enrich business data`);
   // Add a small delay so we know the database row is fully committed before we query it
   setTimeout(() => {
-    enrichBusinesses().catch(err => {
+    enrichBusinesses().catch((err: any) => {
       console.error('❌ Webhook enrichment failed:', err);
     });
   }, 1000);
@@ -502,7 +531,7 @@ app.listen(3000, () => {
   console.log('🤖 Bridget AI Booking Bot is ready!');
 
   // Run business enrichment on startup (non-blocking)
-  enrichBusinesses().catch(err => {
+  enrichBusinesses().catch((err: any) => {
     console.error('Failed to run startup enrichment:', err);
   });
 

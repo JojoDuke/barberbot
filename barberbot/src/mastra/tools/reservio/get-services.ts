@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { reservioClient } from './client';
 
 export const getServicesTool = createTool({
-  id: 'get-services',
+  id: 'reservio_get_services',
   description: 'Get list of available services for a business with name, description, duration, and price',
   inputSchema: z.object({
-    businessId: z.string().describe('The Reservio business ID'),
+    businessId: z.coerce.string().describe('The Reservio business ID'),
   }),
   outputSchema: z.object({
     services: z.array(
@@ -21,7 +21,7 @@ export const getServicesTool = createTool({
   }),
   execute: async ({ context }) => {
     const response: any = await reservioClient.getServices(context.businessId);
-    
+
     const services = response.data.map((service: any) => ({
       id: service.id,
       name: service.attributes.name,

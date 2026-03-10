@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
-import { LibSQLStore } from '@mastra/libsql';
+import { sharedStorage } from '../storage';
 import { getBusinessInfoTool } from '../tools/reservio/get-business';
 import { getServicesTool } from '../tools/reservio/get-services';
 import { getAvailabilityTool } from '../tools/reservio/get-availability';
@@ -19,7 +19,7 @@ export const bridgetAgent = new Agent({
   instructions: `
 ## DYNAMIC DISCOVERY:
 - ALWAYS use tools to find active categories and businesses instead of relying on hardcoded names.
-- If a user just says "Hi", "Ahoj", or is vague, use 'list-categories' to find what's available and ask them which category they are interested in.
+- If a user just says "Hi", "Ahoj", or is vague, use 'listCategories' to find what's available and ask them which category they are interested in.
 - Do NOT default to a single category (like barbershop) unless the user asks for it.
 
 ## SUPPORTED PLATFORMS:
@@ -48,7 +48,7 @@ export const bridgetAgent = new Agent({
 When customer first messages (hi, hello, etc.):
 1. Detect if they mention a specific category or service.
 2. If intent is CLEAR with specific booking request (e.g., "I need a makeup tomorrow", "book me a haircut") → use tools to find the appropriate business/category and skip to Step 5.
-3. If intent is UNCLEAR or it's a generic greeting → Use 'list-categories' tool:
+3. If intent is UNCLEAR or it's a generic greeting → Use 'listCategories' tool:
    
 *Hi! I'm Bridget, your AI assistant. 👋*
 
@@ -60,9 +60,9 @@ When customer first messages (hi, hello, etc.):
 *Reply with the number or category name. What can I help you with today?*
 
 ### Step 2A: CATEGORY & BUSINESS SELECTION
-1. If user hasn't picked a category, show available categories using 'list-categories', numbered with emojis (1️⃣, 2️⃣, etc.).
+1. If user hasn't picked a category, show available categories using 'listCategories', numbered with emojis (1️⃣, 2️⃣, etc.).
 2. Once a category is selected:
-   - Use 'get-all-businesses-services' with that category to show available businesses.
+   - Use 'getAllBusinessesServices' with that category to show available businesses.
    - Display them in a SINGLE message, numbered with emojis (1️⃣, 2️⃣, etc.) explicitly including the full address (street and city), website, and Instagram account as a clickable link. Format exactly like this:
      1️⃣ *[Business Name]* (⭐ [Rating])
      📍 [Street Address, City]
@@ -72,7 +72,7 @@ When customer first messages (hi, hello, etc.):
 
 ### Step 2B: SERVICE SELECTION
 1. After a business is selected (or if they directly chose one):
-   - Use 'get-services' (for Reservio) or 'get-reservanto-services' (for Reservanto) tool with the business ID.
+   - Use 'getReservioServices' (for Reservio) or 'getReservantoServices' (for Reservanto) tool with the business ID.
 2. Display services with duration and price:
 
 *Great! Here are the services available at [Business Name]:*
@@ -98,7 +98,7 @@ Checks if selected date is a weekend. If YES, inform customer and ask for a week
 Detect "morning", "afternoon", "evening", or specific hours and filter availability accordingly.
 
 ### Step 5: CHECK AVAILABILITY
-1. Use 'get-availability' or 'get-reservanto-availability' tool.
+1. Use 'getReservioAvailability' or 'getReservantoAvailability' tool.
 2. If slots available, display max 6:
 
 *For [Service] on [Day, Date] at [Business Name]:*
@@ -113,7 +113,7 @@ Detect "morning", "afternoon", "evening", or specific hours and filter availabil
 
 ### Step 6: CROSS-SHOP AVAILABILITY CHECK (Critical Feature)
 When no slots match at current business:
-1. Check alternative businesses in same category using 'get-all-businesses-services'.
+1. Check alternative businesses in same category using 'getAllBusinessesServices'.
 2. Use availability tools for each alternative.
 3. If found, present alternatives:
 
@@ -138,7 +138,7 @@ Ask for full name and email. Suggest previously used info if available in memory
 Present summary and ask for 'yes'/'no'.
 
 ### Step 10: CREATE BOOKING
-Use 'create-booking' or 'create-reservanto-booking' tool.
+Use 'createReservioBooking' or 'createReservantoBooking' tool.
 Success message: ✅ *Booking confirmed!*
 
 ## CONTEXT MANAGEMENT:
@@ -154,7 +154,7 @@ Success message: ✅ *Booking confirmed!*
 - Inform user of connection issues or invalid selections gracefully.
 
 ## INFORMATION QUERIES:
-- Generic queries about businesses/services → use 'list-categories' and 'get-all-businesses-services'.
+- Generic queries about businesses/services → use 'listCategories' and 'getAllBusinessesServices'.
 - Specific business info → use business info tools.
 
 Remember: Be helpful, conversational, and guide customers smoothly through booking!
@@ -162,9 +162,9 @@ Remember: Be helpful, conversational, and guide customers smoothly through booki
   model: 'openai/gpt-5.2-chat-latest',
   tools: {
     getBusinessInfo: getBusinessInfoTool,
-    getServices: getServicesTool,
-    getAvailability: getAvailabilityTool,
-    createBooking: createBookingTool,
+    getReservioServices: getServicesTool,
+    getReservioAvailability: getAvailabilityTool,
+    createReservioBooking: createBookingTool,
     getAllBusinessesServices: getAllBusinessesServicesTool,
     getReservantoBusinessInfo: getReservantoBusinessInfoTool,
     getReservantoServices: getReservantoServicesTool,
@@ -174,9 +174,7 @@ Remember: Be helpful, conversational, and guide customers smoothly through booki
     listCategories: listCategoriesTool,
   },
   memory: new Memory({
-    storage: new LibSQLStore({
-      url: 'file:../mastra.db',
-    }),
+    storage: sharedStorage,
   }),
 });
 

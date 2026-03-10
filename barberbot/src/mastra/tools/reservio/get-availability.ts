@@ -3,11 +3,11 @@ import { z } from 'zod';
 import { reservioClient } from './client';
 
 export const getAvailabilityTool = createTool({
-  id: 'get-availability',
+  id: 'reservio_get_availability',
   description: 'Get available time slots for a service on a specific date. Returns slots in Europe/Prague timezone.',
   inputSchema: z.object({
-    businessId: z.string().describe('The Reservio business ID'),
-    serviceId: z.string().describe('The service ID to check availability for'),
+    businessId: z.coerce.string().describe('The Reservio business ID'),
+    serviceId: z.coerce.string().describe('The service ID to check availability for'),
     date: z.string().describe('Date in ISO format (YYYY-MM-DD) to check availability'),
     timePreference: z.enum(['morning', 'afternoon', 'evening', 'any']).optional()
       .describe('Time preference: morning (before 12pm), afternoon (12pm-5pm), evening (after 5pm), or any'),

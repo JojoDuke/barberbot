@@ -1,14 +1,12 @@
 
 import { Mastra } from '@mastra/core/mastra';
 import { PinoLogger } from '@mastra/loggers';
-import { LibSQLStore } from '@mastra/libsql';
+import { sharedStorage } from './storage';
 import { bridgetAgent } from './agents/bridget-agent';
 
 export const mastra = new Mastra({
   agents: { bridgetAgent },
-  storage: new LibSQLStore({
-    url: ":memory:",
-  }),
+  storage: sharedStorage,
   logger: new PinoLogger({
     name: 'Mastra',
     level: 'warn',
