@@ -3,10 +3,10 @@ import { z } from 'zod';
 import { reservioClient } from './client';
 
 export const getServicesTool = createTool({
-  id: 'reservio_get_services',
+  id: 'get-services',
   description: 'Get list of available services for a business with name, description, duration, and price',
   inputSchema: z.object({
-    businessId: z.coerce.string().describe('The Reservio business ID'),
+    businessId: z.string().describe('The Reservio business ID'),
   }),
   outputSchema: z.object({
     services: z.array(

@@ -7,6 +7,7 @@ import MessagingResponse from 'twilio/lib/twiml/MessagingResponse';
 import { mastra } from '../src/mastra/index.js';
 import { supabase } from '../src/lib/supabase.js';
 import { enrichBusinesses } from '../src/scripts/enrich-businesses.js';
+import { logger } from '../src/mastra/logger.js';
 
 dotenv.config();
 
@@ -441,8 +442,12 @@ app.post('/whatsapp', async (req, res) => {
     }
 
     console.log('✅ TwiML response prepared successfully');
-  } catch (outerError) {
-    console.error('❌ Outer catch caught crash:', outerError);
+  } catch (outerError: any) {
+    logger.error('❌ WhatsApp Webhook CRASH:', {
+      error: outerError.message,
+      stack: outerError.stack,
+      sender: req.body.From
+    });
     twiml.message('Sorry, something went wrong on our end.');
   }
 

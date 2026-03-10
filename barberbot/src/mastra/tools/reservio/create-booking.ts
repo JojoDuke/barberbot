@@ -4,16 +4,16 @@ import { reservioClient } from './client';
 import { supabase } from '../../../lib/supabase';
 
 export const createBookingTool = createTool({
-  id: 'reservio_create_booking',
+  id: 'create-booking',
   description: 'Create a new booking/appointment in Reservio',
   inputSchema: z.object({
-    businessId: z.coerce.string().describe('The Reservio business ID'),
-    serviceId: z.coerce.string().describe('The service ID to book'),
-    start: z.string().describe('The start time of the booking in ISO format'),
-    firstName: z.string().describe('The first name of the person booking'),
-    lastName: z.string().describe('The last name of the person booking'),
-    email: z.string().email().describe('The email of the person booking'),
-    phone: z.string().describe('The phone number of the person booking'),
+    businessId: z.string().describe('The Reservio business ID'),
+    serviceId: z.string().describe('The service ID to book'),
+    clientName: z.string().describe('Full name of the client'),
+    clientEmail: z.string().describe('Email address of the client'),
+    clientPhone: z.string().describe('Phone number of the client'),
+    start: z.string().describe('Start time in ISO 8601 format with timezone'),
+    end: z.string().describe('End time in ISO 8601 format with timezone'),
     note: z.string().optional().nullable().default('').describe('Optional note for the booking'),
   }),
   outputSchema: z.object({
@@ -25,11 +25,12 @@ export const createBookingTool = createTool({
   }),
   execute: async ({ context }) => {
     const response: any = await reservioClient.createBooking(context.businessId, {
-      clientName: `${context.firstName} ${context.lastName}`.trim(),
-      clientEmail: context.email,
-      clientPhone: context.phone,
+      clientName: context.clientName,
+      clientEmail: context.clientEmail,
+      clientPhone: context.clientPhone,
       serviceId: context.serviceId,
       start: context.start,
+      end: context.end,
       note: context.note || '',
     });
 
@@ -37,12 +38,12 @@ export const createBookingTool = createTool({
 
     // Background: Update user info in Supabase
     try {
-      const cleanPhone = context.phone.replace('whatsapp:', '');
+      const cleanPhone = context.clientPhone.replace('whatsapp:', '');
       await supabase
         .from('users')
         .update({
-          full_name: `${context.firstName} ${context.lastName}`.trim(),
-          email: context.email,
+          full_name: context.clientName,
+          email: context.clientEmail,
         })
         .eq('phone_number', cleanPhone);
       console.log(`✅ Updated Supabase user info for ${cleanPhone}`);

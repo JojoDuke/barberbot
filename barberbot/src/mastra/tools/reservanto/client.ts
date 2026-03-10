@@ -1,5 +1,6 @@
 
 import { getBusinessById, type Business } from '../../../config/businesses';
+import { logApi } from '../../logger';
 
 const BASE_URL = 'https://api.reservanto.cz/v1';
 
@@ -56,14 +57,17 @@ export class ReservantoClient {
 
         if (!res.ok) {
             const text = await res.text();
+            logApi('Reservanto', 'POST', endpoint, { status: res.status, error: text, body }, true);
             throw new Error(`Reservanto API error (${res.status}) on ${endpoint}: ${text}`);
         }
 
         const data = await res.json() as { IsError: boolean; ErrorMessage?: string } & T;
         if (data.IsError) {
+            logApi('Reservanto', 'POST', endpoint, { error: data.ErrorMessage, body }, true);
             throw new Error(`Reservanto API error on ${endpoint}: ${data.ErrorMessage}`);
         }
 
+        logApi('Reservanto', 'POST', endpoint, { body, hasResult: !!data });
         return data;
     }
 

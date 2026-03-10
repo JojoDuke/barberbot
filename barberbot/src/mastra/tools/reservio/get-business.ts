@@ -4,10 +4,10 @@ import { reservioClient } from './client';
 import { getBusinessById } from '../../../config/businesses';
 
 export const getBusinessInfoTool = createTool({
-  id: 'reservio_get_business_info',
+  id: 'get-business-info',
   description: 'Get information about a business including name, address, phone, and timezone',
   inputSchema: z.object({
-    businessId: z.coerce.string().describe('The Reservio business ID'),
+    businessId: z.string().describe('The Reservio business ID'),
   }),
   outputSchema: z.object({
     name: z.string(),

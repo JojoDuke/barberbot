@@ -9,7 +9,7 @@ export const mastra = new Mastra({
   storage: sharedStorage,
   logger: new PinoLogger({
     name: 'Mastra',
-    level: 'warn',
+    level: 'info',
   }),
   telemetry: {
     enabled: false,

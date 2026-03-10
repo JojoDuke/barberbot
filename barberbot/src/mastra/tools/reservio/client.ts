@@ -1,4 +1,5 @@
 import { getBusinessById, type Business } from '../../../config/businesses';
+import { logApi } from '../../logger';
 
 interface ReservioRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
@@ -54,12 +55,15 @@ export class ReservioClient {
 
     if (!response.ok) {
       const errorText = await response.text();
+      logApi('Reservio', method, endpoint, { status: response.status, error: errorText, body }, true);
       throw new Error(
         `Reservio API error (${response.status}): ${errorText}`
       );
     }
 
-    return response.json();
+    const data = await response.json();
+    logApi('Reservio', method, endpoint, { queryParams, responseCount: (data as any).data?.length });
+    return data as T;
   }
 
   // Business methods
