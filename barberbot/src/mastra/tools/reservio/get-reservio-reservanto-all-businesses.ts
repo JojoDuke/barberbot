@@ -1,7 +1,7 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { reservioClient } from './client';
-import { getReservantoClient } from '../reservanto/client';
+import { reservioClient } from './reservio-client';
+import { getReservantoClient } from '../reservanto/reservanto-client';
 import { getBusinessesByCategory } from '../../../config/businesses';
 
 export const getAllBusinessesServicesTool = createTool({

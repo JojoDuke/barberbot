@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { getReservantoClient } from './client';
+import { getReservantoClient } from './reservanto-client';
 
 export const getReservantoResourcesTool = createTool({
     id: 'get-reservanto-resources',

@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { getReservantoClient } from './client';
+import { getReservantoClient } from './reservanto-client';
 
 export const getReservantoAvailabilityTool = createTool({
     id: 'get-reservanto-availability',
@@ -48,7 +48,7 @@ export const getReservantoAvailabilityTool = createTool({
                 if (res.Starts) {
                     if (Array.isArray(res.Starts)) {
                         // Standard list of slots
-                        availableSlots = res.Starts.map(s => new Date((s.Start || s) * 1000).toISOString());
+                        availableSlots = res.Starts.map(s => new Date(((s as any).Start || s) * 1000).toISOString());
                     } else if (typeof res.Starts === 'object') {
                         // Map of resourceId -> timestamps (e.g. for Squash courts)
                         const allTimestamps = Object.values(res.Starts).flat() as number[];

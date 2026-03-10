@@ -1,17 +1,17 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { sharedStorage } from '../storage';
-import { getBusinessInfoTool } from '../tools/reservio/get-business';
-import { getServicesTool } from '../tools/reservio/get-services';
-import { getAvailabilityTool } from '../tools/reservio/get-availability';
-import { createBookingTool } from '../tools/reservio/create-booking';
-import { getAllBusinessesServicesTool } from '../tools/reservio/get-all-businesses-services';
-import { getReservantoBusinessInfoTool } from '../tools/reservanto/get-business';
-import { getReservantoServicesTool } from '../tools/reservanto/get-services';
-import { getReservantoAvailabilityTool } from '../tools/reservanto/get-availability';
-import { createReservantoBookingTool } from '../tools/reservanto/create-booking';
-import { getReservantoResourcesTool } from '../tools/reservanto/get-resources';
-import { listCategoriesTool } from '../tools/reservio/list-categories';
+import { getBusinessInfoTool } from '../tools/reservio/get-reservio-business';
+import { getServicesTool } from '../tools/reservio/get-reservio-services';
+import { getAvailabilityTool } from '../tools/reservio/get-reservio-availability';
+import { createBookingTool } from '../tools/reservio/create-reservio-booking';
+import { getAllBusinessesServicesTool } from '../tools/reservio/get-reservio-reservanto-all-businesses';
+import { getReservantoBusinessInfoTool } from '../tools/reservanto/get-reservanto-business';
+import { getReservantoServicesTool } from '../tools/reservanto/get-reservanto-services';
+import { getReservantoAvailabilityTool } from '../tools/reservanto/get-reservanto-availability';
+import { createReservantoBookingTool } from '../tools/reservanto/create-reservanto-booking';
+import { getReservantoResourcesTool } from '../tools/reservanto/get-reservanto-resources';
+import { listCategoriesTool } from '../tools/reservio/list-reservio-reservanto-categories';
 import { getBusinessesByCategory, getDefaultBusiness } from '../../config/businesses';
 
 export const bridgetAgent = new Agent({

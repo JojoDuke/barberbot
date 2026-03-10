@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { reservioClient } from './client';
+import { reservioClient } from './reservio-client';
 import { supabase } from '../../../lib/supabase';
 
 export const createBookingTool = createTool({

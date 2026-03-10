@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { reservioClient } from './client';
+import { reservioClient } from './reservio-client';
 
 export const getAvailabilityTool = createTool({
   id: 'get-availability',
