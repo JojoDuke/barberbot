@@ -13,8 +13,12 @@ export const createReservantoBookingTool = createTool({
         email: z.string().optional(),
         phone: z.string().optional(),
         serviceId: z.number(),
-        resourceId: z.number().optional().describe('Technical ID of the court or employee. If missing, we will try to find the first available one.'),
+        segmentType: z.string().optional().describe('The type of segment (OneToOne, Classes, RentalLike, EmsLike)'),
+        locationId: z.number().optional().describe('Optional specific location ID'),
+        resourceId: z.number().optional().describe('Technical ID of the court or employee'),
+        appointmentId: z.number().optional().describe('Required for "Classes" segmentType. The ID of the specific appointment.'),
         startTime: z.string().describe('ISO date string for the booking start'),
+        duration: z.number().optional().describe('Duration in minutes (required for RentalLike if not default)'),
         note: z.string().optional(),
     }),
     outputSchema: z.object({
@@ -33,107 +37,123 @@ export const createReservantoBookingTool = createTool({
             phone: context.phone,
         });
 
-        // 2. Resource Discovery (if missing)
-        let resourceId = context.resourceId;
         const bookingStart = new Date(context.startTime);
-
-        if (!resourceId) {
-            console.log('🔍 No resourceId provided, attempting auto-discovery...');
-            const locations = await client.getLocations();
-            const locId = locations.Items?.[0]?.Id;
-
-            if (locId) {
-                const availability = await client.getAvailableSlotsForLocation(
-                    locId,
-                    context.serviceId,
-                    new Date(bookingStart.getTime() - 1000),
-                    new Date(bookingStart.getTime() + 1000)
-                );
-
-                if (availability.Starts && Array.isArray(availability.Starts)) {
-                    resourceId = (availability.Starts[0] as any).BookingResourceId;
-                } else if (availability.Starts && typeof availability.Starts === 'object') {
-                    // Map of resourceId -> times
-                    const entries = Object.entries(availability.Starts);
-                    if (entries.length > 0) {
-                        resourceId = parseInt(entries[0][0]);
-                    }
-                }
-            }
-        }
-
-        if (!resourceId) {
-            // Fallback: just try to get any resource for this service
-            const resources = await client.getBookingResources();
-            resourceId = resources.Items?.find(r => r.BookingServiceIds.includes(context.serviceId))?.Id;
-        }
-
-        if (!resourceId) {
-            throw new Error(`Could not determine a valid ResourceId for service ${context.serviceId}.`);
-        }
-
-        // 3. Create booking
-        let booking: any;
         let bookingId: number = 0;
         let status: string = 'Confirmed';
 
-        try {
-            booking = await client.createBooking({
-                bookingResourceId: resourceId,
-                bookingServiceId: context.serviceId,
-                customerId: customerId,
-                bookingStart,
-                customerNote: context.note,
-                forceConfirmed: true,
-            });
-            bookingId = booking.AppointmentId ?? booking.Id ?? booking.Result?.Id ?? 0;
-            status = booking.Status ?? booking.State ?? 'Confirmed';
-        } catch (err: any) {
-            const errorMsg = err.message || '';
-            console.log(`⚠️ Standard booking failed: ${errorMsg}`);
+        // 2. Proactive Branching based on SegmentType
+        if (context.segmentType === 'Classes') {
+            if (!context.appointmentId && !context.startTime) {
+                throw new Error('For "Classes" segmentType, either appointmentId or startTime is required.');
+            }
 
-            // If it's a "PlaceRentalLike" or segment issue, try to find a class-style Appointment
-            if (errorMsg.includes('PlaceRentalLike') || errorMsg.includes('segmentu')) {
-                console.log('🔄 Attempting fallback to Class-style booking for rental...');
+            let appointmentId = context.appointmentId;
 
-                // Get valid locations
+            // Auto-discovery if appointmentId is missing but startTime is present
+            if (!appointmentId) {
                 const locations = await client.getLocations();
-                const locId = locations.Items?.[0]?.Id;
-
+                const locId = context.locationId || locations.Items?.[0]?.Id;
                 if (locId) {
-                    // Look for Appointments around the start time
                     const apptsRes = await client.getAvailableAppointments({
                         locationId: locId,
                         bookingServiceId: context.serviceId,
-                        intervalStart: new Date(bookingStart.getTime() - 5 * 60 * 1000), // 5 min wiggle room
-                        intervalEnd: new Date(bookingStart.getTime() + 5 * 60 * 1000),
+                        intervalStart: new Date(bookingStart.getTime() - 60000),
+                        intervalEnd: new Date(bookingStart.getTime() + 60000),
                     });
-
-                    // Search for an exact start match
                     const targetUnix = Math.floor(bookingStart.getTime() / 1000);
-                    const matchedAppt = apptsRes.Items?.find(item =>
-                        item.Start === targetUnix &&
-                        (resourceId ? item.BookingResourceId === resourceId : true)
-                    );
-
-                    if (matchedAppt) {
-                        console.log(`✅ Found matching Appointment ID: ${matchedAppt.Id}. Creating class booking...`);
-                        const classRes: any = await client.createClassBooking({
-                            appointmentId: matchedAppt.Id,
-                            customerId,
-                            customerNote: context.note,
-                        });
-                        bookingId = classRes.AppointmentId ?? classRes.Id ?? matchedAppt.Id;
-                        status = classRes.Status || 'Confirmed';
-                    } else {
-                        throw new Error(`Could not find a valid booking slot (Appointment) for ${context.startTime}. Please check availability first.`);
-                    }
-                } else {
-                    throw err; // Re-throw original if no location
+                    appointmentId = apptsRes.Items?.find(i => i.Start === targetUnix)?.Id;
                 }
-            } else {
-                throw err; // Re-throw other errors
             }
+
+            if (!appointmentId) {
+                throw new Error(`Could not find a valid appointment for ${context.startTime}.`);
+            }
+
+            const res: any = await client.createClassBooking({
+                appointmentId,
+                customerId,
+                customerNote: context.note,
+            });
+            bookingId = res.AppointmentId || res.Id || appointmentId;
+            status = res.Status || 'Confirmed';
+
+        } else if (context.segmentType === 'RentalLike') {
+            if (!context.resourceId) {
+                // Try to auto-discover resource for rental
+                const locations = await client.getLocations();
+                const locId = locations.Items?.[0]?.Id;
+                if (locId) {
+                    const availability = await client.getAvailableSlotsForLocation(locId, context.serviceId, bookingStart, new Date(bookingStart.getTime() + 60000));
+                    if (availability.Starts && typeof availability.Starts === 'object') {
+                        context.resourceId = parseInt(Object.keys(availability.Starts)[0]);
+                    }
+                }
+            }
+
+            if (!context.resourceId) {
+                throw new Error('For "RentalLike" segmentType, resourceId is required.');
+            }
+
+            const duration = context.duration || 60; // Default 60 mins
+            const bookingEnd = new Date(bookingStart.getTime() + duration * 60000);
+
+            const res: any = await client.createRentalLikeBooking({
+                bookingResourceId: context.resourceId,
+                customerId,
+                bookingStart,
+                bookingEnd,
+                customerNote: context.note
+            });
+            bookingId = res.AppointmentId || res.Id;
+            status = res.Status || 'Confirmed';
+
+        } else if (context.segmentType === 'EmsLike') {
+            if (!context.resourceId) throw new Error('For "EmsLike" segmentType, resourceId is required.');
+            const res: any = await client.createEmsLikeBooking({
+                bookingResourceId: context.resourceId,
+                bookingServiceId: context.serviceId,
+                customerId,
+                bookingStart,
+                customerNote: context.note
+            });
+            bookingId = res.AppointmentId || res.Id;
+            status = res.Status || 'Confirmed';
+
+        } else {
+            // Default to "OneToOne"
+            let resourceId = context.resourceId;
+            if (!resourceId) {
+                const locations = await client.getLocations();
+                const locId = locations.Items?.[0]?.Id;
+                if (locId) {
+                    const availability = await client.getAvailableSlotsForLocation(locId, context.serviceId, bookingStart, new Date(bookingStart.getTime() + 60000));
+                    if (availability.Starts) {
+                        if (Array.isArray(availability.Starts)) {
+                            resourceId = (availability.Starts[0] as any).BookingResourceId;
+                        } else {
+                            resourceId = parseInt(Object.keys(availability.Starts)[0]);
+                        }
+                    }
+                }
+            }
+
+            if (!resourceId) {
+                const resources = await client.getBookingResources();
+                resourceId = resources.Items?.find(r => r.BookingServiceIds.includes(context.serviceId))?.Id;
+            }
+
+            if (!resourceId) throw new Error('Could not determine a valid ResourceId.');
+
+            const res: any = await client.createBooking({
+                bookingResourceId: resourceId,
+                bookingServiceId: context.serviceId,
+                customerId,
+                bookingStart,
+                customerNote: context.note,
+                forceConfirmed: true
+            });
+            bookingId = res.AppointmentId || res.Id;
+            status = res.Status || 'Confirmed';
         }
 
         // 3. Background: Update user info in Supabase
@@ -156,7 +176,7 @@ export const createReservantoBookingTool = createTool({
         return {
             bookingId,
             status,
-            message: `Booking confirmed successfully! Appointment ID: ${bookingId}`,
+            message: `Booking confirmed successfully! ${context.segmentType || 'OneToOne'} Appointment ID: ${bookingId}`,
         };
     },
 });

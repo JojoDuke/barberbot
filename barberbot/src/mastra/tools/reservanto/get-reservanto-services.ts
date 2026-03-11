@@ -16,13 +16,23 @@ export const getReservantoServicesTool = createTool({
             duration: z.number().describe('Duration in minutes'),
             price: z.number(),
             currency: z.string(),
+            segmentType: z.string().describe('The type of business segment (OneToOne, Classes, RentalLike, EmsLike)'),
         })),
     }),
     execute: async ({ context }) => {
         const client = await getReservantoClient(context.businessId);
-        const response: any = await client.getServices();
 
-        const serviceList = response.BookingServices || response.Items || [];
+        // Fetch services and segments in parallel
+        const [servicesResponse, segmentsResponse] = await Promise.all([
+            client.getServices(),
+            client.getSegments()
+        ]);
+
+        const serviceList = servicesResponse.Items || [];
+        const segments = segmentsResponse.Items || [];
+
+        // Create a map for quick lookup
+        const segmentMap = new Map(segments.map(seg => [seg.Id, seg.SegmentType]));
 
         return {
             services: serviceList.map((s: any) => ({
@@ -32,6 +42,7 @@ export const getReservantoServicesTool = createTool({
                 duration: s.Duration,
                 price: s.Price || 0,
                 currency: s.Currency || 'CZK',
+                segmentType: segmentMap.get(s.SegmentId) || 'OneToOne',
             })),
         };
     },

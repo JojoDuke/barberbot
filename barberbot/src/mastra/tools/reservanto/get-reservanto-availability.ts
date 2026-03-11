@@ -8,6 +8,7 @@ export const getReservantoAvailabilityTool = createTool({
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),
         serviceId: z.number().describe('The Reservanto service ID'),
+        segmentType: z.string().optional().describe('The type of segment (OneToOne, Classes, etc.)'),
         resourceId: z.number().optional().describe('Optional specific employee/resource ID'),
         locationId: z.number().optional().describe('Optional specific location ID'),
         startDate: z.string().describe('ISO date string for interval start'),
@@ -17,6 +18,7 @@ export const getReservantoAvailabilityTool = createTool({
         availableSlots: z.array(z.object({
             startTime: z.string().describe('ISO date string of available start time'),
             resourceId: z.number().describe('The specific technical ID of the resource (court/employee) for this slot'),
+            appointmentId: z.number().optional().describe('The ID of the fixed appointment/class, required for booking in "Classes" segmentType'),
         })),
     }),
     execute: async ({ context }) => {
@@ -24,8 +26,38 @@ export const getReservantoAvailabilityTool = createTool({
         const start = new Date(context.startDate);
         const end = new Date(context.endDate);
 
-        let slots: Array<{ startTime: string; resourceId: number }> = [];
+        let slots: Array<{ startTime: string; resourceId: number; appointmentId?: number }> = [];
 
+        // 1. Handle "Classes" segment type (fixed appointments)
+        if (context.segmentType === 'Classes') {
+            try {
+                const locations = await client.getLocations();
+                const locationId = context.locationId || locations.Items?.[0]?.Id;
+
+                if (locationId) {
+                    const res = await client.getAvailableAppointments({
+                        locationId,
+                        bookingServiceId: context.serviceId,
+                        intervalStart: start,
+                        intervalEnd: end
+                    });
+
+                    slots = (res.Items || [])
+                        .filter(item => item.Capacity > item.ReservedCount) // Only show slots with remaining capacity
+                        .map(item => ({
+                            startTime: new Date(item.Start * 1000).toISOString(),
+                            resourceId: item.BookingResourceId,
+                            appointmentId: item.Id
+                        }));
+                }
+                return { availableSlots: slots };
+            } catch (error) {
+                console.error('Error fetching Reservanto Class appointments:', error);
+                return { availableSlots: [] };
+            }
+        }
+
+        // 2. Handle "OneToOne" (and fallback) segment types (flexible starts)
         try {
             const locations = await client.getLocations();
             const locationItems = locations.Items || [];
@@ -49,7 +81,7 @@ export const getReservantoAvailabilityTool = createTool({
                             resourceId: (s as any).BookingResourceId || context.resourceId || 0
                         }));
                     } else if (typeof res.Starts === 'object') {
-                        // Map of resourceId -> timestamps (Squash courts)
+                        // Map of resourceId -> timestamps (Squash courts - sometimes they show as OneToOne with Location Starts)
                         Object.entries(res.Starts).forEach(([rId, timestamps]) => {
                             const resourceId = parseInt(rId);
                             (timestamps as number[]).forEach(t => {
@@ -75,17 +107,16 @@ export const getReservantoAvailabilityTool = createTool({
             }
         }
 
-        // De-duplicate: Keep only one resource per time slot for the AI's simplicity,
-        // but ensure we have a valid resourceId for that time.
-        const uniqueSlotsMap = new Map<string, number>();
+        // De-duplicate: Keep only one resource per time slot for the AI's simplicity
+        const uniqueSlotsMap = new Map<string, { resourceId: number; appointmentId?: number }>();
         slots.forEach(s => {
             if (!uniqueSlotsMap.has(s.startTime)) {
-                uniqueSlotsMap.set(s.startTime, s.resourceId);
+                uniqueSlotsMap.set(s.startTime, { resourceId: s.resourceId, appointmentId: s.appointmentId });
             }
         });
 
         const finalSlots = Array.from(uniqueSlotsMap.entries())
-            .map(([startTime, resourceId]) => ({ startTime, resourceId }))
+            .map(([startTime, data]) => ({ startTime, resourceId: data.resourceId, appointmentId: data.appointmentId }))
             .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
         return {

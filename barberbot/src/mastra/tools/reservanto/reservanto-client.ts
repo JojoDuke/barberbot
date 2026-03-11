@@ -159,8 +159,21 @@ export class ReservantoClient {
                 Currency: string;
                 State: string;
                 BookingResourceIds: number[];
+                SegmentId: number;
             }>;
         }>('/BookingService/GetList');
+    }
+
+    async getSegments() {
+        return this.post<{
+            Items: Array<{
+                Id: number;
+                InternalName: string;
+                LocalizedName: string;
+                SegmentType: string;
+                State: string;
+            }>;
+        }>('/Segment/GetList');
     }
 
     async getServicesForResource(bookingResourceId: number) {
@@ -277,6 +290,48 @@ export class ReservantoClient {
             AppointmentId: params.appointmentId,
             CustomerId: params.customerId,
             Count: params.count || 1,
+            CustomerNote: params.customerNote || '',
+        });
+    }
+
+    async createRentalLikeBooking(params: {
+        bookingResourceId: number;
+        customerId: number;
+        bookingStart: Date;
+        bookingEnd: Date;
+        count?: number;
+        customerNote?: string;
+    }) {
+        return this.post<{
+            AppointmentId: number;
+            CustomerId: number;
+            Status: string;
+        }>('/RentalLike/CreateBooking', {
+            BookingResourceId: params.bookingResourceId,
+            CustomerId: params.customerId,
+            BookingStart: Math.floor(params.bookingStart.getTime() / 1000),
+            BookingEnd: Math.floor(params.bookingEnd.getTime() / 1000),
+            Count: params.count || 1,
+            CustomerNote: params.customerNote || '',
+        });
+    }
+
+    async createEmsLikeBooking(params: {
+        bookingResourceId: number;
+        bookingServiceId: number;
+        customerId: number;
+        bookingStart: Date;
+        customerNote?: string;
+    }) {
+        return this.post<{
+            AppointmentId: number;
+            CustomerId: number;
+            Status: string;
+        }>('/EmsLike/CreateBooking', {
+            BookingResourceId: params.bookingResourceId,
+            BookingServiceId: params.bookingServiceId,
+            CustomerId: params.customerId,
+            BookingStart: Math.floor(params.bookingStart.getTime() / 1000),
             CustomerNote: params.customerNote || '',
         });
     }
