@@ -16,6 +16,7 @@ export const getAllBusinessesServicesTool = createTool({
       z.object({
         id: z.string(),
         name: z.string(),
+        platform: z.enum(['reservio', 'reservanto']).describe('CRITICAL: The booking platform this business uses. MUST use matching tools.'),
         address: z.string().optional(),
         website: z.string().optional(),
         instagram: z.string().optional(),
@@ -73,6 +74,7 @@ export const getAllBusinessesServicesTool = createTool({
             return {
               id: business.id,
               name: business.name,
+              platform: 'reservanto' as const,
               address,
               website: business.website,
               instagram: business.instagram,
@@ -106,6 +108,7 @@ export const getAllBusinessesServicesTool = createTool({
             return {
               id: business.id,
               name: business.name,
+              platform: 'reservio' as const,
               address,
               website: business.website,
               instagram: business.instagram,
@@ -118,6 +121,7 @@ export const getAllBusinessesServicesTool = createTool({
           return {
             id: business.id,
             name: business.name,
+            platform: business.platform,
             address: business.address || '',
             website: business.website,
             instagram: business.instagram,
