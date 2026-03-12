@@ -4,13 +4,16 @@ import { getReservantoClient } from './reservanto-client';
 
 export const getReservantoAvailabilityTool = createTool({
     id: 'get-reservanto-availability',
-    description: 'Check available booking slots for a service in a given time range',
+    description: `Check available booking slots for a Reservanto service in a given time range.
+
+CRITICAL RULES:
+1. NEVER pass a locationId unless you explicitly received it from a prior getReservantoResources or getReservantoBusinessInfo tool call. Do NOT guess or invent a locationId. If unsure, omit it entirely.`,
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),
         serviceId: z.number().describe('The Reservanto service ID'),
         segmentType: z.string().optional().describe('The type of segment (OneToOne, Classes, etc.)'),
-        resourceId: z.number().optional().describe('Optional specific employee/resource ID'),
-        locationId: z.number().optional().describe('Optional specific location ID'),
+        resourceId: z.number().optional().describe('Optional specific employee/resource ID. Omit if unknown.'),
+        locationId: z.number().optional().describe('Optional location ID. ONLY provide this if you received it from a prior tool call. Do NOT invent or guess this value.'),
         startDate: z.string().describe('ISO date string for interval start'),
         endDate: z.string().describe('ISO date string for interval end'),
     }),
