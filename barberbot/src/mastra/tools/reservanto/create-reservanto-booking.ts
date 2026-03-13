@@ -10,16 +10,16 @@ export const createReservantoBookingTool = createTool({
         businessId: z.string().describe('The Reservanto business ID'),
         firstName: z.string(),
         lastName: z.string(),
-        email: z.string().optional(),
-        phone: z.string().optional(),
+        email: z.string().nullish(),
+        phone: z.string().nullish(),
         serviceId: z.number(),
-        segmentType: z.string().optional().describe('The type of segment (OneToOne, Classes, RentalLike, EmsLike)'),
-        locationId: z.number().optional().describe('Optional specific location ID'),
-        resourceId: z.number().optional().describe('Technical ID of the court or employee'),
-        appointmentId: z.number().optional().describe('Required for "Classes" segmentType. The ID of the specific appointment.'),
+        segmentType: z.string().nullish().describe('The type of segment (OneToOne, Classes, RentalLike, EmsLike)'),
+        locationId: z.number().nullish().describe('Optional specific location ID'),
+        resourceId: z.number().nullish().describe('Technical ID of the court or employee'),
+        appointmentId: z.number().nullish().describe('Required for "Classes" segmentType. The ID of the specific appointment.'),
         startTime: z.string().describe('ISO date string for the booking start'),
-        duration: z.number().optional().describe('Duration in minutes (required for RentalLike if not default)'),
-        note: z.string().optional(),
+        duration: z.number().nullish().describe('Duration in minutes (required for RentalLike if not default)'),
+        note: z.string().nullish(),
     }),
     outputSchema: z.object({
         bookingId: z.number(),
@@ -33,8 +33,8 @@ export const createReservantoBookingTool = createTool({
         const customerId = await client.findOrCreateCustomer({
             firstName: context.firstName,
             lastName: context.lastName,
-            email: context.email,
-            phone: context.phone,
+            email: context.email ?? undefined,
+            phone: context.phone ?? undefined,
         });
 
         const bookingStart = new Date(context.startTime);
@@ -72,7 +72,7 @@ export const createReservantoBookingTool = createTool({
             const res: any = await client.createClassBooking({
                 appointmentId,
                 customerId,
-                customerNote: context.note,
+                customerNote: context.note ?? undefined,
             });
             bookingId = res.AppointmentId || res.Id || appointmentId;
             status = res.Status || 'Confirmed';
@@ -98,11 +98,11 @@ export const createReservantoBookingTool = createTool({
             const bookingEnd = new Date(bookingStart.getTime() + duration * 60000);
 
             const res: any = await client.createRentalLikeBooking({
-                bookingResourceId: context.resourceId,
+                bookingResourceId: context.resourceId!,
                 customerId,
                 bookingStart,
                 bookingEnd,
-                customerNote: context.note
+                customerNote: context.note ?? undefined
             });
             bookingId = res.AppointmentId || res.Id;
             status = res.Status || 'Confirmed';
@@ -114,7 +114,7 @@ export const createReservantoBookingTool = createTool({
                 bookingServiceId: context.serviceId,
                 customerId,
                 bookingStart,
-                customerNote: context.note
+                customerNote: context.note ?? undefined
             });
             bookingId = res.AppointmentId || res.Id;
             status = res.Status || 'Confirmed';
@@ -149,7 +149,7 @@ export const createReservantoBookingTool = createTool({
                 bookingServiceId: context.serviceId,
                 customerId,
                 bookingStart,
-                customerNote: context.note,
+                customerNote: context.note ?? undefined,
                 forceConfirmed: true
             });
             bookingId = res.AppointmentId || res.Id;
