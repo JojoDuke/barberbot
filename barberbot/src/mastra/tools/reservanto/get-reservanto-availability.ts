@@ -1,6 +1,6 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { getReservantoClient } from './reservanto-client';
+import { getReservantoClient, formatPragueISO } from './reservanto-client';
 
 export const getReservantoAvailabilityTool = createTool({
     id: 'get-reservanto-availability',
@@ -48,7 +48,7 @@ CRITICAL RULES:
                     slots = (res.Items || [])
                         .filter(item => item.Capacity > item.ReservedCount) // Only show slots with remaining capacity
                         .map(item => ({
-                            startTime: new Date(item.Start * 1000).toISOString(),
+                            startTime: formatPragueISO(item.Start),
                             resourceId: item.BookingResourceId,
                             appointmentId: item.Id
                         }));
@@ -80,7 +80,7 @@ CRITICAL RULES:
                     if (Array.isArray(res.Starts)) {
                         // Standard list of slots { Start: number; BookingResourceId: number }
                         slots = res.Starts.map(s => ({
-                            startTime: new Date(((s as any).Start || s) * 1000).toISOString(),
+                            startTime: formatPragueISO((s as any).Start || s),
                             resourceId: (s as any).BookingResourceId || context.resourceId || 0
                         }));
                     } else if (typeof res.Starts === 'object') {
@@ -103,7 +103,7 @@ CRITICAL RULES:
                 const res = await client.getAvailableSlots(context.resourceId!, context.serviceId, start, end);
                 if (res.Starts) {
                     slots = res.Starts.map(s => ({
-                        startTime: new Date(s * 1000).toISOString(),
+                        startTime: formatPragueISO(s),
                         resourceId: context.resourceId!
                     }));
                 }

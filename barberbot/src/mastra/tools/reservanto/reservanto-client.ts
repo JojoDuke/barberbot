@@ -4,6 +4,37 @@ import { logApi } from '../../logger';
 
 const BASE_URL = 'https://api.reservanto.cz/v1';
 
+const pragueFormatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Prague',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+});
+
+/**
+ * Converts a Date or Unix timestamp to an ISO string with the Europe/Prague offset.
+ * Example: 2026-03-16T09:00:00+01:00
+ */
+export function formatPragueISO(dateInput: Date | number): string {
+    const date = typeof dateInput === 'number' ? new Date(dateInput * 1000) : dateInput;
+    const parts = pragueFormatter.formatToParts(date);
+    const map = Object.fromEntries(parts.map(p => [p.type, p.value])) as Record<string, string>;
+    const localISO = `${map.year}-${map.month}-${map.day}T${map.hour}:${map.minute}:${map.second}`;
+
+    const localDate = new Date(date.toLocaleString('en-US', { timeZone: 'Europe/Prague' }));
+    const offsetMin = Math.round((localDate.getTime() - date.getTime()) / 60000);
+    const sign = offsetMin >= 0 ? '+' : '-';
+    const absOffset = Math.abs(offsetMin);
+    const oH = String(Math.floor(absOffset / 60)).padStart(2, '0');
+    const oM = String(absOffset % 60).padStart(2, '0');
+
+    return `${localISO}${sign}${oH}:${oM}`;
+}
+
 export class ReservantoClient {
     private ltt: string;
     private cachedSTT: string | null = null;
