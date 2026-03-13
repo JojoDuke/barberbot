@@ -8,6 +8,7 @@ export class ReservantoClient {
     private ltt: string;
     private cachedSTT: string | null = null;
     private sttExpiresAt: number = 0;
+    private sttPromise: Promise<string> | null = null; // Lock for concurrent requests
 
     constructor(ltt: string) {
         this.ltt = ltt;
@@ -15,23 +16,38 @@ export class ReservantoClient {
 
     private async getSTT(): Promise<string> {
         const now = Math.floor(Date.now() / 1000);
+
+        // Return cached token if valid
         if (this.cachedSTT && now < this.sttExpiresAt) return this.cachedSTT;
 
-        const res = await fetch(`${BASE_URL}/Authorize/GetShortTimeToken`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ LongTimeToken: this.ltt, TimeStamp: now }),
-        });
+        // If another request is currently fetching the token, wait for it instead of duplicating
+        if (this.sttPromise) return this.sttPromise;
 
-        const data = await res.json() as { ShortTimeToken: string; IsError: boolean; ErrorMessage?: string };
+        // Create a new fetch promise and cache it so concurrent calls can await it
+        this.sttPromise = (async () => {
+            try {
+                const res = await fetch(`${BASE_URL}/Authorize/GetShortTimeToken`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ LongTimeToken: this.ltt, TimeStamp: now }),
+                });
 
-        if (data.IsError || !data.ShortTimeToken) {
-            throw new Error(`Reservanto auth failed: ${data.ErrorMessage || 'Unknown error'}`);
-        }
+                const data = await res.json() as { ShortTimeToken: string; IsError: boolean; ErrorMessage?: string };
 
-        this.cachedSTT = data.ShortTimeToken;
-        this.sttExpiresAt = now + 25 * 60; // cache 25 min
-        return this.cachedSTT;
+                if (data.IsError || !data.ShortTimeToken) {
+                    throw new Error(`Reservanto auth failed: ${data.ErrorMessage || 'Unknown error'}`);
+                }
+
+                this.cachedSTT = data.ShortTimeToken;
+                this.sttExpiresAt = now + 25 * 60; // cache 25 min
+                return this.cachedSTT;
+            } finally {
+                // Clear the lock when finished (success or fail)
+                this.sttPromise = null;
+            }
+        })();
+
+        return this.sttPromise;
     }
     // ... (rest of the class remains the same but using this.post)
     // Actually I need to make sure post uses this.getSTT which it already does.
@@ -414,6 +430,9 @@ export class ReservantoClient {
     }
 }
 
+// Cache to store clients by Token to reuse ShortTimeTokens across tool calls
+const clientCache = new Map<string, ReservantoClient>();
+
 // Factory function to get client for a specific business
 export async function getReservantoClient(businessId: string): Promise<ReservantoClient> {
     const business = await getBusinessById(businessId);
@@ -422,5 +441,8 @@ export async function getReservantoClient(businessId: string): Promise<Reservant
     const ltt = process.env[business.tokenEnvVar];
     if (!ltt) throw new Error(`Missing Reservanto LTT/token for ${business.name}. Please set ${business.tokenEnvVar} in .env file`);
 
-    return new ReservantoClient(ltt);
+    if (!clientCache.has(ltt)) {
+        clientCache.set(ltt, new ReservantoClient(ltt));
+    }
+    return clientCache.get(ltt)!;
 }
