@@ -296,6 +296,46 @@ app.post('/whatsapp', async (req, res) => {
       const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
       console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
 
+      // 🛡️ SHIELD: Pre-fetch and deduplicate tool call IDs in history to prevent "Duplicate item" crashes
+      let historyMessages: any[] = [];
+      try {
+        const agentWithMemory = agent as any;
+        if (agentWithMemory.memory) {
+          const rawHistory = await agentWithMemory.memory.getMessages({ threadId });
+          const seenToolCallIds = new Set<string>();
+
+          // Clean history: remove any tool call result if we've already seen that ID
+          historyMessages = (rawHistory || []).filter((msg: any) => {
+            // Check assistant messages for tool calls
+            const toolCallIdsInMessage = msg.toolCalls?.map((tc: any) => tc.toolCallId) || [];
+
+            // If this is a tool result message, check its ID
+            if (msg.role === 'tool') {
+              if (seenToolCallIds.has(msg.toolCallId)) {
+                console.warn(`🛡️ Shield: Removing duplicate tool result for ID: ${msg.toolCallId}`);
+                return false;
+              }
+              seenToolCallIds.add(msg.toolCallId);
+            }
+
+            // Handle tool calls in assistant messages
+            for (const id of toolCallIdsInMessage) {
+              if (seenToolCallIds.has(id)) {
+                // This is a duplicate assistant declaration of the same ID
+                // (Mastra sometimes saves tool calls twice if a stream is interrupted)
+                console.warn(`🛡️ Shield: Removing message with duplicate tool call ID: ${id}`);
+                return false;
+              }
+              seenToolCallIds.add(id);
+            }
+
+            return true;
+          });
+        }
+      } catch (err) {
+        console.error('🛡️ Shield Error: Failed to pre-clean history:', err);
+      }
+
       const TIMEOUT_MS = 60000; // Increase to 60s for stability
       let fullResponse = '';
 
@@ -305,16 +345,18 @@ app.post('/whatsapp', async (req, res) => {
       });
 
       // Create the agent stream promise
+      // We pass the cleaned history as the first argument, followed by the new message
       const agentPromise = agent.stream(
         [
+          ...historyMessages,
           {
             role: 'user',
             content: incomingMessage,
           },
         ],
         {
-          resourceId: senderNumber, // This enables conversation memory per user
-          threadId: threadId, // Unique thread ID per user (phone number)
+          resourceId: senderNumber,
+          threadId: threadId,
         }
       );
 
