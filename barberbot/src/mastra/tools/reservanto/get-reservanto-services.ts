@@ -39,16 +39,18 @@ export const getReservantoServicesTool = createTool({
         // Create a map for quick lookup
         const segmentMap = new Map(segments.map((seg: any) => [seg.Id, seg.SegmentType]));
 
-        return {
-            services: serviceList.map((s: any) => ({
-                id: s.Id || s.BookingServiceId,
-                name: s.Name,
-                description: s.Description || '',
-                duration: s.Duration,
-                price: s.Price || 0,
-                currency: s.Currency || 'CZK',
-                segmentType: (segmentMap.get(s.SegmentId) as string) || 'OneToOne',
-            })),
-        };
+        const services = serviceList.map((s: any) => ({
+            id: s.Id || s.BookingServiceId,
+            name: s.Name,
+            description: s.Description || '',
+            duration: s.Duration,
+            price: s.Price || 0,
+            currency: s.Currency || 'CZK',
+            segmentType: (segmentMap.get(s.SegmentId) as string) || 'OneToOne',
+        }));
+
+        console.log(`📡 [Reservanto] Returning ${services.length} services for business ${context.businessId}:`, services.map((s: any) => `${s.name} (ID: ${s.id})`).join(', '));
+
+        return { services };
     },
 });
