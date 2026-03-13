@@ -12,8 +12,8 @@ CRITICAL RULES:
         businessId: z.string().describe('The Reservanto business ID'),
         serviceId: z.number().describe('The Reservanto service ID'),
         segmentType: z.string().optional().describe('The type of segment (OneToOne, Classes, etc.)'),
-        resourceId: z.number().optional().describe('Optional specific employee/resource ID. Omit if unknown.'),
-        locationId: z.number().optional().describe('Optional location ID. ONLY provide this if you received it from a prior tool call. Do NOT invent or guess this value.'),
+        resourceId: z.number().nullish().describe('Optional specific employee/resource ID. Omit if unknown.'),
+        locationId: z.number().nullish().describe('Optional location ID. ONLY provide this if you received it from a prior tool call. Do NOT invent or guess this value.'),
         startDate: z.string().describe('ISO date string for interval start'),
         endDate: z.string().describe('ISO date string for interval end'),
     }),
@@ -100,7 +100,7 @@ CRITICAL RULES:
         } catch (error) {
             console.error('Error fetching Reservanto availability:', error);
             if (context.resourceId) {
-                const res = await client.getAvailableSlots(context.resourceId, context.serviceId, start, end);
+                const res = await client.getAvailableSlots(context.resourceId!, context.serviceId, start, end);
                 if (res.Starts) {
                     slots = res.Starts.map(s => ({
                         startTime: new Date(s * 1000).toISOString(),

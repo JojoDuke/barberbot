@@ -7,7 +7,7 @@ export const getReservantoResourcesTool = createTool({
     description: 'Get list of booking resources (employees/barbers/chairs) for the Reservanto business',
     inputSchema: z.object({
         businessId: z.string().describe('The Reservanto business ID'),
-        locationId: z.number().optional().describe('Filter by specific location ID'),
+        locationId: z.number().nullish().describe('Filter by specific location ID'),
     }),
     outputSchema: z.object({
         resources: z.array(z.object({
@@ -35,7 +35,7 @@ export const getReservantoResourcesTool = createTool({
             }
         }
 
-        const response: any = await client.getBookingResources(locationId);
+        const response: any = await client.getBookingResources(locationId ?? undefined);
         const resourceList = response.Items || [];
 
         return {
