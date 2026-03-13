@@ -22,17 +22,22 @@ export const getReservantoServicesTool = createTool({
     execute: async ({ context }) => {
         const client = await getReservantoClient(context.businessId);
 
-        // Fetch services and segments in parallel
-        const [servicesResponse, segmentsResponse] = await Promise.all([
-            client.getServices(),
-            client.getSegments()
-        ]);
+        // Fetch services
+        const servicesResponse = await client.getServices();
+        let segmentsResponse: any = { Items: [] };
 
-        const serviceList = servicesResponse.Items || [];
+        // Attempt to fetch segments, some tokens (like Líčírna) lack this permission
+        try {
+            segmentsResponse = await client.getSegments();
+        } catch (error: any) {
+            console.warn(`⚠️ Could not fetch segments, defaulting to OneToOne. Error: ${error.message}`);
+        }
+
+        const serviceList = servicesResponse.Items || (servicesResponse as any).BookingServices || [];
         const segments = segmentsResponse.Items || [];
 
         // Create a map for quick lookup
-        const segmentMap = new Map(segments.map(seg => [seg.Id, seg.SegmentType]));
+        const segmentMap = new Map(segments.map((seg: any) => [seg.Id, seg.SegmentType]));
 
         return {
             services: serviceList.map((s: any) => ({
@@ -42,7 +47,7 @@ export const getReservantoServicesTool = createTool({
                 duration: s.Duration,
                 price: s.Price || 0,
                 currency: s.Currency || 'CZK',
-                segmentType: segmentMap.get(s.SegmentId) || 'OneToOne',
+                segmentType: (segmentMap.get(s.SegmentId) as string) || 'OneToOne',
             })),
         };
     },

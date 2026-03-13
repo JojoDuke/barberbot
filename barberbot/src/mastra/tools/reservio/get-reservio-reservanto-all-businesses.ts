@@ -9,7 +9,7 @@ export const getAllBusinessesServicesTool = createTool({
   description: 'Get all businesses in a category with their services. Use this when user asks about barbershops, physiotherapy, or cosmetics in general.',
   inputSchema: z.object({
     category: z.string().describe('The business category (e.g. barbershop, massage, etc.)'),
-    minRating: z.number().optional().describe('Minimum Google rating to filter businesses'),
+    minRating: z.number().nullish().describe('Minimum Google rating to filter businesses'),
   }),
   outputSchema: z.object({
     businesses: z.array(

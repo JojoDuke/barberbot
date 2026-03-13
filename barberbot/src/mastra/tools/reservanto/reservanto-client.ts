@@ -166,8 +166,20 @@ export class ReservantoClient {
 
     async getServices() {
         return this.post<{
-            Items: Array<{
+            Items?: Array<{
                 Id: number;
+                Name: string;
+                Description: string;
+                Duration: number;
+                Price: number;
+                Currency: string;
+                State: string;
+                BookingResourceIds: number[];
+                SegmentId: number;
+            }>;
+            BookingServices?: Array<{
+                Id: number;
+                BookingServiceId: number;
                 Name: string;
                 Description: string;
                 Duration: number;
