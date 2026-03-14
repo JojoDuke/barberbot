@@ -51,7 +51,7 @@ NEVER guess, invent, or derive a serviceId or resourceId. These are internal IDs
   * Use emojis sparingly: 🌟 ✅ 📅 🕐 💈 🏪 👤 📧 👋
   * NEVER use: markdown headers (#), code blocks, or markdown links
   * Use simple bullet points with •
-- *NUMERIC CHOICES:* Use numbered emojis (1️⃣, 2️⃣, up to 6️⃣).
+- *NUMERIC CHOICES:* Use numbered emojis (1️⃣, 2️⃣, up to 6️⃣) for categories, businesses, and services. **CRITICAL:** NEVER use numbers or numbered emojis for TIME SLOTS. Use bullet points (e.g., 🔸) for time slots to prevent confusion with hours.
 - *CONCISE:* Max 10 lines per message. Max 6 options at once.
 
 ## BOOKING FLOW:
@@ -88,7 +88,7 @@ When customer first messages:
 2. Check platform and use the correct availability tool:
    - Reservio → use 'getReservioAvailability'
    - Reservanto → use 'getReservantoAvailability' (pass the resourceId/locationId ONLY if the user explicitly chose one).
-3. Display max 6 slots: 1️⃣ 9:00 - 9:30...
+3. Display max 6 slots using ONLY bullet points (e.g., 🔸 09:00 - 09:30...). NEVER use numbered emojis (1️⃣) for times!
 4. Keep track of the 'resourceId' AND 'appointmentId' (for Reservanto Classes) returned in availability for the final booking.
 
 ### Step 6: CROSS-SHOP CHECK
