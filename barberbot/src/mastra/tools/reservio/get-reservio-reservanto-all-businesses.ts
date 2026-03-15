@@ -4,6 +4,12 @@ import { reservioClient } from './reservio-client';
 import { getReservantoClient } from '../reservanto/reservanto-client';
 import { getBusinessesByCategory } from '../../../config/businesses';
 
+const formatInstagramUrl = (ig?: string) => {
+  if (!ig) return undefined;
+  if (ig.startsWith('http')) return ig;
+  return `https://instagram.com/${ig.replace(/^@/, '')}`;
+};
+
 export const getAllBusinessesServicesTool = createTool({
   id: 'get-all-businesses-services',
   description: 'Get all businesses in a category with their services. Use this when user asks about barbershops, physiotherapy, or cosmetics in general.',
@@ -77,7 +83,7 @@ export const getAllBusinessesServicesTool = createTool({
               platform: 'reservanto' as const,
               address,
               website: business.website,
-              instagram: business.instagram,
+              instagram: formatInstagramUrl(business.instagram),
               googleRating: business.googleRating,
               services,
             };
@@ -111,23 +117,23 @@ export const getAllBusinessesServicesTool = createTool({
               platform: 'reservio' as const,
               address,
               website: business.website,
-              instagram: business.instagram,
+              instagram: formatInstagramUrl(business.instagram),
               googleRating: business.googleRating,
               services,
             };
           }
         } catch (error) {
           console.error(`Error fetching data for ${business.name}:`, error);
-          return {
-            id: business.id,
-            name: business.name,
-            platform: business.platform,
-            address: business.address || '',
-            website: business.website,
-            instagram: business.instagram,
-            googleRating: business.googleRating,
-            services: [],
-          };
+            return {
+              id: business.id,
+              name: business.name,
+              platform: business.platform,
+              address: business.address || '',
+              website: business.website,
+              instagram: formatInstagramUrl(business.instagram),
+              googleRating: business.googleRating,
+              services: [],
+            };
         }
       })
     );

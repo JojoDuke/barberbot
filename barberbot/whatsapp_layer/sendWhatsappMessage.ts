@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import express from 'express';
+import axios from 'axios';
 import path from 'path';
 import fs from 'fs';
 import twilio from 'twilio';
@@ -76,38 +77,58 @@ function sanitizeWhatsAppMessage(message: string): string {
   return sanitized;
 }
 
-// Function to send typing indicator
+// Function to send a single typing indicator
 async function sendTypingIndicator(messageSid: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!accountSid || !authToken) {
-    console.warn('⚠️  Twilio credentials not set - skipping typing indicator');
     return;
   }
 
   try {
-    const url = 'https://messaging.twilio.com/v2/Indicators/Typing.json';
-    const auth = Buffer.from(`${accountSid}:${authToken}`).toString('base64');
+    const params = new URLSearchParams();
+    params.append('messageId', messageSid);
+    params.append('channel', 'whatsapp');
 
-    const body = new URLSearchParams();
-    body.append('messageId', messageSid);
-    body.append('channel', 'whatsapp');
-
-    await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: body.toString(),
-    });
-
+    await axios.post(
+      'https://messaging.twilio.com/v2/Indicators/Typing.json',
+      params,
+      {
+        auth: {
+          username: accountSid,
+          password: authToken
+        },
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
     console.log('💬 Typing indicator sent');
-  } catch (error) {
-    console.warn('⚠️  Failed to send typing indicator:', error);
-    // Don't throw - typing indicator is not critical
+  } catch (error: any) {
+    console.warn('⚠️ Failed to send typing indicator:', error.message);
   }
+}
+
+/**
+ * Starts a recurring typing indicator that stays active while the bot is thinking.
+ * Returns a function to stop the indicator.
+ */
+function startTypingIndicator(messageSid: string): () => void {
+  if (!messageSid) return () => {};
+
+  // Send immediately
+  sendTypingIndicator(messageSid);
+
+  // WhatsApp typing indicators usually last ~5-10 seconds.
+  // We refresh every 4 seconds to be safe.
+  const interval = setInterval(() => {
+    sendTypingIndicator(messageSid);
+  }, 4000);
+
+  return () => {
+    clearInterval(interval);
+  };
 }
 
 // Helper to delay execution
@@ -272,12 +293,8 @@ app.post('/whatsapp', async (req, res) => {
       return;
     }
 
-    // Send typing indicator immediately (non-blocking)
-    if (messageSid) {
-      sendTypingIndicator(messageSid).catch(() => {
-        // Silently fail - typing indicator is not critical
-      });
-    }
+    // Start persistent typing indicator
+    const stopTyping = startTypingIndicator(messageSid);
 
     // Register this thread as being processed
     processingThreads.add(senderNumber);
@@ -478,7 +495,8 @@ app.post('/whatsapp', async (req, res) => {
       const errorMessage = 'Sorry, I encountered an error. Please try again in a moment.';
       twiml.message(errorMessage);
     } finally {
-      // ALWAYS unlock the thread so the user can send another message
+      // ALWAYS stop the typing indicator and unlock the thread
+      stopTyping();
       console.log(`🔓 Releasing thread for ${senderNumber}`);
       processingThreads.delete(senderNumber);
     }
