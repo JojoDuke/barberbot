@@ -74,40 +74,58 @@ CRITICAL RULES:
             }
 
             if (locationId) {
-                const res = await client.getAvailableSlotsForLocation(locationId, context.serviceId, start, end);
+                try {
+                   const res = await client.getAvailableSlotsForLocation(locationId, context.serviceId, start, end);
 
-                if (res.Starts) {
-                    if (Array.isArray(res.Starts)) {
-                        // Standard list of slots { Start: number; BookingResourceId: number }
-                        slots = res.Starts.map(s => ({
-                            startTime: formatPragueISO((s as any).Start || s),
-                            resourceId: (s as any).BookingResourceId || context.resourceId || 0
-                        }));
-                    } else if (typeof res.Starts === 'object') {
-                        // Map of resourceId -> timestamps (Squash courts - sometimes they show as OneToOne with Location Starts)
-                        Object.entries(res.Starts).forEach(([rId, timestamps]) => {
-                            const resourceId = parseInt(rId);
-                            (timestamps as number[]).forEach(t => {
-                                slots.push({
-                                    startTime: new Date(t * 1000).toISOString(),
-                                    resourceId
+                    if (res.Starts) {
+                        if (Array.isArray(res.Starts)) {
+                            slots = res.Starts.map(s => ({
+                                startTime: formatPragueISO((s as any).Start || s),
+                                resourceId: (s as any).BookingResourceId || context.resourceId || 0
+                            }));
+                        } else if (typeof res.Starts === 'object') {
+                            Object.entries(res.Starts).forEach(([rId, timestamps]) => {
+                                const resourceId = parseInt(rId);
+                                (timestamps as number[]).forEach(t => {
+                                    slots.push({
+                                        startTime: new Date(t * 1000).toISOString(),
+                                        resourceId
+                                    });
                                 });
                             });
-                        });
+                        }
+                    }
+                } catch (locationError: any) {
+                    // 🛡️ SHIELD: If location-wide fetch fails (e.g., "Ve vybrané provozovně neposkytuje žádný zdroj vybranou službu!"),
+                    // it means the service might not be mapped to the default location.
+                    // Fallback to searching all resources that specifically support this service.
+                    console.warn(`⚠️ Location-wide availability failed for business ${context.businessId}: ${locationError.message}. Falling back to resource-specific search.`);
+                    
+                    const resources = await client.getBookingResources();
+                    const targetResources = resources.Items.filter(r => 
+                        r.BookingServiceIds.includes(context.serviceId) || context.resourceId === r.Id
+                    );
+
+                    if (targetResources.length > 0) {
+                        const resourceSlots = await Promise.all(
+                            targetResources.map(async (resObj) => {
+                                try {
+                                    const resAvail = await client.getAvailableSlots(resObj.Id, context.serviceId, start, end);
+                                    return (resAvail.Starts || []).map(startTime => ({
+                                        startTime: formatPragueISO(startTime),
+                                        resourceId: resObj.Id
+                                    }));
+                                } catch (e) {
+                                    return [];
+                                }
+                            })
+                        );
+                        slots = resourceSlots.flat();
                     }
                 }
             }
         } catch (error) {
-            console.error('Error fetching Reservanto availability:', error);
-            if (context.resourceId) {
-                const res = await client.getAvailableSlots(context.resourceId!, context.serviceId, start, end);
-                if (res.Starts) {
-                    slots = res.Starts.map(s => ({
-                        startTime: formatPragueISO(s),
-                        resourceId: context.resourceId!
-                    }));
-                }
-            }
+            console.error('Error fetching Reservanto availability system:', error);
         }
 
         // De-duplicate: Keep only one resource per time slot for the AI's simplicity

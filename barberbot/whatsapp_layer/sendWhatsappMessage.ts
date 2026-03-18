@@ -88,8 +88,8 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
 
   try {
     const params = new URLSearchParams();
-    params.append('messageId', messageSid);
-    params.append('channel', 'whatsapp');
+    params.append('MessageId', messageSid);
+    params.append('Channel', 'whatsapp');
 
     await axios.post(
       'https://messaging.twilio.com/v2/Indicators/Typing.json',
