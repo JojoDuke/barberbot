@@ -73,7 +73,7 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
       return Object.values(staticBusinesses);
     }
 
-    return data.map(b => ({
+    const businesses = data.map(b => ({
       id: b.id,
       name: b.name,
       category: b.category,
@@ -86,6 +86,16 @@ export const getAllBusinesses = async (): Promise<Business[]> => {
       address: b.address,
       placeId: b.place_id,
     }));
+
+    // Trigger background enrichment if anything is missing Place data
+    const needsEnrichment = businesses.some(b => !b.placeId || !b.googleRating);
+    if (needsEnrichment) {
+      import('../scripts/enrich-businesses.js').then(({ enrichBusinesses }) => {
+        enrichBusinesses().catch(() => {}); // Fire and forget
+      });
+    }
+
+    return businesses;
   } catch (err) {
     return Object.values(staticBusinesses);
   }

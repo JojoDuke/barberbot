@@ -82,18 +82,17 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
-  if (!accountSid || !authToken) {
+  if (!accountSid || !authToken || !messageSid) {
     return;
   }
 
   try {
-    const params = new URLSearchParams();
-    params.append('MessageId', messageSid);
-    params.append('Channel', 'whatsapp');
+    // Using a raw string to ensure perfect x-www-form-urlencoded formatting
+    const body = `MessageId=${messageSid}&Channel=whatsapp`;
 
     await axios.post(
-      'https://messaging.twilio.com/v2/Indicators/Typing.json',
-      params,
+      'https://messaging.twilio.com/v2/Indicators/Typing',
+      body,
       {
         auth: {
           username: accountSid,
@@ -106,7 +105,11 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
     );
     console.log('💬 Typing indicator sent');
   } catch (error: any) {
-    console.warn('⚠️ Failed to send typing indicator:', error.message);
+    if (error.response) {
+      console.warn('⚠️ Failed to send typing indicator:', error.response.status, JSON.stringify(error.response.data));
+    } else {
+      console.warn('⚠️ Failed to send typing indicator:', error.message);
+    }
   }
 }
 
