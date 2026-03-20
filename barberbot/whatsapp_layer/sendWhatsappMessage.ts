@@ -47,7 +47,6 @@ function sanitizeWhatsAppMessage(message: string): string {
     // Convert markdown formatting to WhatsApp format
     .replace(/\*\*\*/g, '*') // Triple asterisks to single
     .replace(/\*\*/g, '*') // Double asterisks to single
-    .replace(/_{2,}/g, '_') // Multiple underscores to single
     .replace(/~~(.+?)~~/g, '$1') // Remove strikethrough
     .replace(/`{3}[\s\S]*?`{3}/g, '') // Remove code blocks
     .replace(/`([^`]+)`/g, '$1') // Remove inline code formatting
