@@ -87,10 +87,10 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
 
   try {
     // Using a raw string to ensure perfect x-www-form-urlencoded formatting
-    const body = `MessageId=${messageSid}&Channel=whatsapp`;
+    const body = `messageId=${messageSid}&channel=whatsapp`;
 
     await axios.post(
-      'https://messaging.twilio.com/v2/Indicators/Typing',
+      'https://messaging.twilio.com/v2/Indicators/Typing.json',
       body,
       {
         auth: {
