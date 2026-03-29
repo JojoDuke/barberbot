@@ -41,11 +41,11 @@ export const createBookingTool = createTool({
       const cleanPhone = context.clientPhone.replace('whatsapp:', '');
       await supabase
         .from('users')
-        .update({
-          full_name: context.clientName,
+        .upsert({
+          phone_number: cleanPhone,
+          name: context.clientName,
           email: context.clientEmail,
-        })
-        .eq('phone_number', cleanPhone);
+        }, { onConflict: 'phone_number' });
       console.log(`✅ Updated Supabase user info for ${cleanPhone}`);
     } catch (err) {
       console.error('❌ Failed to update Supabase user info:', err);

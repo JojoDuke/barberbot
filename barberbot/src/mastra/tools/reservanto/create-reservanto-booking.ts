@@ -162,11 +162,11 @@ export const createReservantoBookingTool = createTool({
                 const cleanPhone = context.phone.replace('whatsapp:', '');
                 await supabase
                     .from('users')
-                    .update({
-                        full_name: `${context.firstName} ${context.lastName}`.trim(),
+                    .upsert({
+                        phone_number: cleanPhone,
+                        name: `${context.firstName} ${context.lastName}`.trim(),
                         email: context.email || null,
-                    })
-                    .eq('phone_number', cleanPhone);
+                    }, { onConflict: 'phone_number' });
                 console.log(`✅ Updated Supabase user info for ${cleanPhone}`);
             } catch (err) {
                 console.error('❌ Failed to update Supabase user info:', err);
