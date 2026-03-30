@@ -86,7 +86,6 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
   }
 
   try {
-    console.log(`💬 Sending typing indicator — AccountSid: ${accountSid}, MessageSid: ${messageSid}`);
     // Using a raw string to ensure perfect x-www-form-urlencoded formatting
     const body = `messageId=${messageSid}&channel=whatsapp`;
 
