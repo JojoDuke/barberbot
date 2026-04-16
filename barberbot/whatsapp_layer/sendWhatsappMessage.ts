@@ -136,6 +136,15 @@ function startTypingIndicator(messageSid: string): () => void {
 // Helper to delay execution
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+/** OpenAI Responses API rejects the whole request if the same item id (e.g. fc_...) appears twice. */
+function isDuplicateResponsesItemError(error: unknown): boolean {
+  const msg = error instanceof Error ? error.message : String(error ?? '');
+  return (
+    /Duplicate item found with id/i.test(msg) ||
+    (msg.includes('Duplicate item') && msg.includes('Remove duplicate items'))
+  );
+}
+
 // Helper to send WhatsApp message via REST API
 async function sendWhatsAppMessageRest(to: string, from: string, body: string, mediaUrl?: string) {
   try {
@@ -350,6 +359,20 @@ app.post('/whatsapp', async (req, res) => {
 
             return true;
           });
+
+          // Second pass: OpenAI Responses uses duplicate-sensitive item ids (fc_...) on messages/parts
+          const seenFcIds = new Set<string>();
+          historyMessages = historyMessages.filter((msg: any) => {
+            const id = msg?.id;
+            if (typeof id === 'string' && id.startsWith('fc_')) {
+              if (seenFcIds.has(id)) {
+                console.warn(`🛡️ Shield: Removing duplicate Responses item id: ${id}`);
+                return false;
+              }
+              seenFcIds.add(id);
+            }
+            return true;
+          });
         }
       } catch (err) {
         console.error('🛡️ Shield Error: Failed to pre-clean history:', err);
@@ -363,30 +386,37 @@ app.post('/whatsapp', async (req, res) => {
         setTimeout(() => reject(new Error('Agent response timeout. The AI is taking too long.')), TIMEOUT_MS);
       });
 
-      // Create the agent stream promise
-      // We pass the cleaned history as the first argument, followed by the new message
-      const agentPromise = agent.stream(
-        [
-          ...historyMessages,
-          {
-            role: 'user',
-            content: incomingMessage,
-          },
-        ],
-        {
-          resourceId: senderNumber,
-          threadId: threadId,
+      const userMessage = { role: 'user' as const, content: incomingMessage };
+      let messagesForModel: any[] = [...historyMessages, userMessage];
+
+      // Stream with one retry: Responses API errors if duplicate fc_* ids appear in `input`
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const agentPromise = agent.stream(messagesForModel, {
+            resourceId: senderNumber,
+            threadId: threadId,
+          });
+
+          const response = await Promise.race([agentPromise, timeoutPromise]);
+
+          console.log('📡 Streaming response...');
+
+          for await (const chunk of response.textStream) {
+            fullResponse += chunk;
+          }
+          break;
+        } catch (streamErr) {
+          if (attempt === 0 && isDuplicateResponsesItemError(streamErr)) {
+            console.warn(
+              `🛡️ Duplicate Responses item in thread ${threadId} — clearing thread and retrying once (same as !clear).`
+            );
+            await (mastra.storage as any)?.deleteThread({ threadId });
+            messagesForModel = [userMessage];
+            fullResponse = '';
+            continue;
+          }
+          throw streamErr;
         }
-      );
-
-      // Race between agent response and timeout
-      const response = await Promise.race([agentPromise, timeoutPromise]);
-
-      console.log('📡 Streaming response...');
-
-      // Accumulate the streamed response
-      for await (const chunk of response.textStream) {
-        fullResponse += chunk;
       }
 
       console.log(`🤖 Bot response (length: ${fullResponse.length}):`);
