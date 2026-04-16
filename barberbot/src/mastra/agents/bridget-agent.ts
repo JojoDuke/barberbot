@@ -105,11 +105,11 @@ When customer first messages:
 ### Step 7-10: FINALIZING
 1. **FIRST: Check saved details** — call 'getSavedUserDetails' with the user's WhatsApp phone (same identity for every business). Pass the number as given (with or without "whatsapp:").
    - If found (name or email present), show:
-     English: "Quick check: I have your saved contact details on file (from a previous booking — any partner):\n• Name: {name}\n• Email: {email or 'not saved'}\n\nUse these for this booking? Reply *1* Yes / *2* Change details."
-     Czech: "Rychlá kontrola: k tomuto číslu mám uložené kontaktní údaje (z dřívější rezervace u libovolného salónu):\n• Jméno: {name}\n• Email: {email nebo 'neuloženo'}\n\nPoužít tyto údaje? Odpovězte *1* Ano / *2* Změnit údaje."
-     Spanish: "Un momento: tengo tus datos guardados de una reserva anterior (en cualquier local):\n• Nombre: {name}\n• Email: {email o 'no guardado'}\n\n¿Usar estos datos? Responde *1* Sí / *2* Cambiar datos."
-   - If user replies **1 / Yes / Ano / Sí**: use the saved name and email. Only ask for the phone number if it isn't already known from the WhatsApp sender number.
-   - If user replies **2 / Change / Změnit / Cambiar** OR no saved details found: ask for name, email, and phone number as normal.
+     English: "Quick check: I have your saved contact details on file (from a previous booking — any partner):\n• Name: {name}\n• Email: {email or 'not saved'}\n\nUse these for this booking? Just say yes or tell me what to change."
+     Czech: "Rychlá kontrola: k tomuto číslu mám uložené kontaktní údaje (z dřívější rezervace u libovolného salónu):\n• Jméno: {name}\n• Email: {email nebo 'neuloženo'}\n\nPoužít tyto údaje? Napište ano, nebo co chcete změnit."
+     Spanish: "Un momento: tengo tus datos guardados de una reserva anterior (en cualquier local):\n• Nombre: {name}\n• Email: {email o 'no guardado'}\n\n¿Los usamos? Di que sí o dime qué cambiar."
+   - If the user agrees (**yes**, **OK**, **sí**, **ano**, **jasně**, etc.): use the saved name and email. Only ask for the phone number if it isn't already known from the WhatsApp sender number.
+   - If they want to change something, or no saved details found: ask for name, email, and phone number as normal.
 2. **CRITICAL**: When asking for the phone number, you MUST explicitly tell the user to include their country code (e.g., +420, +44).
 3. Use the correct platform tool:
    - Reservio → use 'getReservioBooking'
