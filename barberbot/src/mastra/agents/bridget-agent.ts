@@ -13,6 +13,7 @@ import { createReservantoBookingTool } from '../tools/reservanto/create-reservan
 import { getReservantoResourcesTool } from '../tools/reservanto/get-reservanto-resources';
 import { listCategoriesTool } from '../tools/reservio/list-reservio-reservanto-categories';
 import { getBusinessesByCategory, getDefaultBusiness } from '../../config/businesses';
+import { getSavedUserDetailsTool } from '../tools/get-saved-user-details';
 
 export const bridgetAgent = new Agent({
   name: 'Bridget',
@@ -97,12 +98,18 @@ When customer first messages:
 - Present alternatives in the user's language.
 
 ### Step 7-10: FINALIZING
-- Confirm details, ask for name, email, and phone number.
-- **CRITICAL**: When asking for the phone number, you MUST explicitly tell the user to include their country code (e.g., +420, +44).
-- Use the correct platform tool:
-  - Reservio → use 'getReservioBooking'
-  - Reservanto → use 'createReservantoBooking' (pass segmentType and appointmentId if available)
-- Success message: ✅ *Rezervace potvrzena!* (or English equivalent).
+1. **FIRST: Check saved details** — call 'getSavedUserDetails' with the user's WhatsApp phone number (strip "whatsapp:" prefix).
+   - If found (name or email present), show:
+     English: "Quick check: I have details saved from your last booking for this number:\n• Name: {name}\n• Email: {email or 'not saved'}\n\nUse these for this booking? Reply *1* Yes / *2* Change details."
+     Czech: "Rychlá kontrola: pro toto číslo mám uložené údaje z minulé rezervace:\n• Jméno: {name}\n• Email: {email nebo 'neuloženo'}\n\nPoužít tyto údaje? Odpovězte *1* Ano / *2* Změnit údaje."
+     Spanish: "Un momento: encontré datos guardados de tu última reserva:\n• Nombre: {name}\n• Email: {email o 'no guardado'}\n\n¿Usar estos datos? Responde *1* Sí / *2* Cambiar datos."
+   - If user replies **1 / Yes / Ano / Sí**: use the saved name and email. Only ask for the phone number if it isn't already known from the WhatsApp sender number.
+   - If user replies **2 / Change / Změnit / Cambiar** OR no saved details found: ask for name, email, and phone number as normal.
+2. **CRITICAL**: When asking for the phone number, you MUST explicitly tell the user to include their country code (e.g., +420, +44).
+3. Use the correct platform tool:
+   - Reservio → use 'getReservioBooking'
+   - Reservanto → use 'createReservantoBooking' (pass segmentType and appointmentId if available)
+4. Success message: ✅ *Rezervace potvrzena!* (or English equivalent).
 `,
   model: 'openai/gpt-5.2-chat-latest',
   tools: {
@@ -117,6 +124,7 @@ When customer first messages:
     createReservantoBooking: createReservantoBookingTool,
     getReservantoResources: getReservantoResourcesTool,
     listCategories: listCategoriesTool,
+    getSavedUserDetails: getSavedUserDetailsTool,
   },
   memory: new Memory({
     storage: sharedStorage,
