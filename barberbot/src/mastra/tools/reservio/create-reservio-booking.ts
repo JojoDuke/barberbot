@@ -2,6 +2,7 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { reservioClient } from './reservio-client';
 import { supabase } from '../../../lib/supabase';
+import { normalizePhoneForUserDb } from '../../../lib/phone';
 
 export const createBookingTool = createTool({
   id: 'get-reservio-booking',
@@ -38,7 +39,7 @@ export const createBookingTool = createTool({
 
     // Background: Update user info in Supabase
     try {
-      const cleanPhone = context.clientPhone.replace('whatsapp:', '');
+      const cleanPhone = normalizePhoneForUserDb(context.clientPhone);
       await supabase
         .from('users')
         .upsert({

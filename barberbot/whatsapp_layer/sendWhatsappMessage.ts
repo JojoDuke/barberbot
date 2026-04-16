@@ -9,6 +9,7 @@ import { mastra } from '../src/mastra/index.js';
 import { supabase } from '../src/lib/supabase.js';
 import { enrichBusinesses } from '../src/scripts/enrich-businesses.js';
 import { logger } from '../src/mastra/logger.js';
+import { normalizePhoneForUserDb } from '../src/lib/phone.js';
 
 dotenv.config();
 
@@ -186,25 +187,32 @@ app.post('/whatsapp', async (req, res) => {
       return;
     }
 
-    // Background: Ensure user exists in Supabase 'users' table
+    // Background: Ensure user exists in Supabase 'users' table (one row per WhatsApp identity, all businesses)
     (async () => {
       try {
-        const cleanNumber = senderNumber.replace('whatsapp:', '');
-        const { data: existingUser } = await supabase
+        const canonical = normalizePhoneForUserDb(senderNumber);
+        const legacy = senderNumber.replace(/^whatsapp:/i, '').trim();
+        let { data: existingUser } = await supabase
           .from('users')
           .select('phone_number')
-          .eq('phone_number', cleanNumber)
+          .eq('phone_number', canonical)
           .maybeSingle();
+        if (!existingUser && legacy !== canonical) {
+          const second = await supabase
+            .from('users')
+            .select('phone_number')
+            .eq('phone_number', legacy)
+            .maybeSingle();
+          existingUser = second.data;
+        }
 
         if (!existingUser) {
-          const { error } = await supabase
-            .from('users')
-            .insert({ phone_number: cleanNumber });
+          const { error } = await supabase.from('users').insert({ phone_number: canonical });
 
           if (error) {
             console.error('❌ Failed to register new user in Supabase:', error.message);
           } else {
-            console.log(`🆕 Registered new user: ${cleanNumber}`);
+            console.log(`🆕 Registered new user: ${canonical}`);
           }
         }
       } catch (err) {
@@ -318,6 +326,27 @@ app.post('/whatsapp', async (req, res) => {
         throw new Error('Bridget agent not found');
       }
 
+      const canonicalPhone = normalizePhoneForUserDb(senderNumber);
+      const rawClean = senderNumber.replace(/^whatsapp:/i, '').trim();
+      let profileRow: { name: string | null; email: string | null } | null = null;
+      {
+        let { data } = await supabase.from('users').select('name, email').eq('phone_number', canonicalPhone).maybeSingle();
+        if (!data && rawClean !== canonicalPhone) {
+          const second = await supabase.from('users').select('name, email').eq('phone_number', rawClean).maybeSingle();
+          data = second.data;
+        }
+        profileRow = data;
+      }
+
+      const sessionIdentityContext = [
+        '[Session — WhatsApp user identity]',
+        `Canonical phone (database key; same for every business): ${canonicalPhone}`,
+        profileRow?.name || profileRow?.email
+          ? `Stored contact in Supabase (from any prior booking): name=${profileRow.name ?? ''}, email=${profileRow.email ?? ''}`
+          : 'No name/email stored yet; they will be saved after a successful booking.',
+        `Use this phone with getSavedUserDetails: ${canonicalPhone}`,
+      ].join('\n');
+
       // Call the agent with memory context (using phone number as resourceId)
       console.log('🔄 Calling Bridget...');
       // Use phone number as threadId to ensure each user has their own conversation thread
@@ -347,6 +376,7 @@ app.post('/whatsapp', async (req, res) => {
           const agentPromise = agent.stream(messagesForModel, {
             resourceId: senderNumber,
             threadId: threadId,
+            context: [{ role: 'system', content: sessionIdentityContext }],
           });
 
           const response = await Promise.race([agentPromise, timeoutPromise]);

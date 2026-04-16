@@ -1,19 +1,20 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { supabase } from '../../lib/supabase';
+import { normalizePhoneForUserDb } from '../../lib/phone';
 
 export const getSavedUserDetailsTool = createTool({
   id: 'get-saved-user-details',
   description:
-    'Look up saved contact details (name, email) for the current user by their phone number. ' +
-    'Call this tool right before asking the user for their name/email during the booking finalisation step. ' +
-    'If details are found, present them to the user and ask if they want to reuse them.',
+    'Look up saved contact details (name, email) for this WhatsApp user by phone. ' +
+    'Details are stored per phone number for the whole platform — not per business. ' +
+    'Call this at booking finalisation before asking for name/email. ' +
+    'If details are found, offer to reuse them.',
   inputSchema: z.object({
     phoneNumber: z
       .string()
       .describe(
-        'The WhatsApp sender phone number, e.g. +420123456789 or whatsapp:+420123456789. ' +
-          'Strip the "whatsapp:" prefix before passing.',
+        'WhatsApp sender phone, e.g. +420123456789 or whatsapp:+420123456789.',
       ),
   }),
   outputSchema: z.object({
@@ -22,13 +23,19 @@ export const getSavedUserDetailsTool = createTool({
     email: z.string().nullable(),
   }),
   execute: async ({ context }) => {
-    const cleanPhone = context.phoneNumber.replace('whatsapp:', '').trim();
+    const normalized = normalizePhoneForUserDb(context.phoneNumber);
+    const legacy = context.phoneNumber.replace(/^whatsapp:/i, '').trim();
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('name, email')
-      .eq('phone_number', cleanPhone)
-      .maybeSingle();
+    const fetchRow = async (key: string) =>
+      supabase.from('users').select('name, email').eq('phone_number', key).maybeSingle();
+
+    let { data, error } = await fetchRow(normalized);
+
+    if (!data && legacy !== normalized) {
+      const second = await fetchRow(legacy);
+      data = second.data;
+      error = second.error;
+    }
 
     if (error) {
       console.error('❌ getSavedUserDetails error:', error.message);
