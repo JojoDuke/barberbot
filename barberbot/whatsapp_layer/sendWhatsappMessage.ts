@@ -324,59 +324,11 @@ app.post('/whatsapp', async (req, res) => {
       const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`; // Remove non-numeric chars for clean thread ID
       console.log(`💬 Using thread ID: ${threadId} for resource: ${senderNumber}`);
 
-      // 🛡️ SHIELD: Pre-fetch and deduplicate tool call IDs in history to prevent "Duplicate item" crashes
-      let historyMessages: any[] = [];
-      try {
-        const agentWithMemory = agent as any;
-        if (agentWithMemory.memory) {
-          const rawHistory = await agentWithMemory.memory.getMessages({ threadId });
-          const seenToolCallIds = new Set<string>();
-
-          // Clean history: remove any tool call result if we've already seen that ID
-          historyMessages = (rawHistory || []).filter((msg: any) => {
-            // Check assistant messages for tool calls
-            const toolCallIdsInMessage = msg.toolCalls?.map((tc: any) => tc.toolCallId) || [];
-
-            // If this is a tool result message, check its ID
-            if (msg.role === 'tool') {
-              if (seenToolCallIds.has(msg.toolCallId)) {
-                console.warn(`🛡️ Shield: Removing duplicate tool result for ID: ${msg.toolCallId}`);
-                return false;
-              }
-              seenToolCallIds.add(msg.toolCallId);
-            }
-
-            // Handle tool calls in assistant messages
-            for (const id of toolCallIdsInMessage) {
-              if (seenToolCallIds.has(id)) {
-                // This is a duplicate assistant declaration of the same ID
-                // (Mastra sometimes saves tool calls twice if a stream is interrupted)
-                console.warn(`🛡️ Shield: Removing message with duplicate tool call ID: ${id}`);
-                return false;
-              }
-              seenToolCallIds.add(id);
-            }
-
-            return true;
-          });
-
-          // Second pass: OpenAI Responses uses duplicate-sensitive item ids (fc_...) on messages/parts
-          const seenFcIds = new Set<string>();
-          historyMessages = historyMessages.filter((msg: any) => {
-            const id = msg?.id;
-            if (typeof id === 'string' && id.startsWith('fc_')) {
-              if (seenFcIds.has(id)) {
-                console.warn(`🛡️ Shield: Removing duplicate Responses item id: ${id}`);
-                return false;
-              }
-              seenFcIds.add(id);
-            }
-            return true;
-          });
-        }
-      } catch (err) {
-        console.error('🛡️ Shield Error: Failed to pre-clean history:', err);
-      }
+      // IMPORTANT: Pass only the *new* user message here.
+      // Mastra's prepare-memory-step already loads persisted thread history from storage and does
+      // messageList.add(memoryMessages, "memory").add(options.messages, "user").
+      // If we also pre-fetch getMessages() and spread it into stream(), the same turns are sent
+      // twice to OpenAI Responses → duplicate fc_* item ids → "Duplicate item found" API errors.
 
       const TIMEOUT_MS = 60000; // Increase to 60s for stability
       let fullResponse = '';
@@ -387,9 +339,9 @@ app.post('/whatsapp', async (req, res) => {
       });
 
       const userMessage = { role: 'user' as const, content: incomingMessage };
-      let messagesForModel: any[] = [...historyMessages, userMessage];
+      let messagesForModel: any[] = [userMessage];
 
-      // Stream with one retry: Responses API errors if duplicate fc_* ids appear in `input`
+      // One retry if thread was already corrupted (e.g. before the fix above): clear + same message only
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const agentPromise = agent.stream(messagesForModel, {

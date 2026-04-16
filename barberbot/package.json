@@ -12,7 +12,8 @@
     "whatsapp:watch": "tsx watch whatsapp_layer/sendWhatsappMessage.ts",
     "test:sanitizer": "tsx whatsapp_layer/test-message-sanitizer.ts",
     "seed:businesses": "tsx src/scripts/seed-businesses.ts",
-    "enrich:businesses": "tsx src/scripts/enrich-businesses.ts"
+    "enrich:businesses": "tsx src/scripts/enrich-businesses.ts",
+    "mastra:clear-all": "tsx src/scripts/clear-all-mastra-conversations.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
     "node": ">=22.13.0"
   },
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "@mastra/core": "^0.24.9",
     "@mastra/evals": "^0.14.4",
     "@mastra/libsql": "^0.16.4",
