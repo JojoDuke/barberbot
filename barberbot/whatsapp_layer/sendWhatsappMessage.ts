@@ -22,10 +22,17 @@ app.use(express.urlencoded({ extended: false }));
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 
 // User states for command triggers
-const userStates = new Map<string, 'AWAITING_BROADCAST_CONFIRM'>();
+const userStates = new Map<string, 'AWAITING_BROADCAST_CONFIRM' | 'AWAITING_TC_ACCEPTANCE'>();
 
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
+
+// Terms & Conditions acceptance gate message
+const TC_MESSAGE =
+  'Welcome! 👋\n\n' +
+  'Before using this booking service, please read and accept our Terms & Conditions.\n\n' +
+  'By continuing you agree to our terms of service and consent to receiving booking-related messages via WhatsApp.\n\n' +
+  'Reply *Yes* to accept and get started.';
 
 // Host URL for serving images (defaults to ngrok/tunnel URL if available, else localhost)
 // You should set BASE_URL in .env to your ngrok URL (e.g. https://xxxx.ngrok.io)
@@ -187,40 +194,81 @@ app.post('/whatsapp', async (req, res) => {
       return;
     }
 
-    // Background: Ensure user exists in Supabase 'users' table (one row per WhatsApp identity, all businesses)
-    (async () => {
-      try {
-        const canonical = normalizePhoneForUserDb(senderNumber);
-        const legacy = senderNumber.replace(/^whatsapp:/i, '').trim();
-        let { data: existingUser } = await supabase
-          .from('users')
-          .select('phone_number')
-          .eq('phone_number', canonical)
-          .maybeSingle();
-        if (!existingUser && legacy !== canonical) {
+    const normalizedMsg = incomingMessage.trim().toLowerCase();
+
+    // Synchronous: ensure user exists in Supabase and check T&C acceptance
+    const canonical = normalizePhoneForUserDb(senderNumber);
+    const legacy = senderNumber.replace(/^whatsapp:/i, '').trim();
+    let hasAcceptedTC = true; // fail-open: proceed if DB check errors out
+
+    try {
+      let { data: userRow, error: userError } = await supabase
+        .from('users')
+        .select('phone_number, terms_accepted_at')
+        .eq('phone_number', canonical)
+        .maybeSingle();
+
+      if (userError && (userError.code === '42703' || userError.message?.includes('terms_accepted_at'))) {
+        // Column doesn't exist yet — skip gate until migration is applied
+        console.warn('⚠️  terms_accepted_at column not found — skipping T&C gate. Run the migration to enable it.');
+        hasAcceptedTC = true;
+      } else {
+        // Try legacy phone format if canonical not found
+        if (!userRow && legacy !== canonical) {
           const second = await supabase
             .from('users')
-            .select('phone_number')
+            .select('phone_number, terms_accepted_at')
             .eq('phone_number', legacy)
             .maybeSingle();
-          existingUser = second.data;
+          userRow = second.data;
         }
 
-        if (!existingUser) {
-          const { error } = await supabase.from('users').insert({ phone_number: canonical });
-
-          if (error) {
-            console.error('❌ Failed to register new user in Supabase:', error.message);
+        if (!userRow) {
+          // First ever message from this number — create the user row
+          const { error: insertError } = await supabase.from('users').insert({ phone_number: canonical });
+          if (insertError) {
+            console.error('❌ Failed to register new user in Supabase:', insertError.message);
           } else {
             console.log(`🆕 Registered new user: ${canonical}`);
           }
+          hasAcceptedTC = false; // brand-new user hasn't accepted yet
+        } else {
+          hasAcceptedTC = userRow.terms_accepted_at != null;
         }
-      } catch (err) {
-        console.error('❌ Error during user sync in Supabase:', err);
       }
-    })();
+    } catch (err) {
+      console.error('❌ Error during user sync / T&C check:', err);
+      hasAcceptedTC = true; // fail-open on unexpected errors
+    }
 
-    const normalizedMsg = incomingMessage.trim().toLowerCase();
+    // -1. Terms & Conditions gate — must be accepted before anything else
+    const isAwaitingTC = userStates.get(senderNumber) === 'AWAITING_TC_ACCEPTANCE';
+
+    if (!hasAcceptedTC || isAwaitingTC) {
+      const acceptanceWords = ['yes', 'ano', 'ok', 'accept', 'souhlasím', 'souhlasim', 'agree', '1'];
+      const userAccepted = acceptanceWords.some(w => normalizedMsg === w || normalizedMsg.startsWith(w + ' '));
+
+      if (isAwaitingTC && userAccepted) {
+        try {
+          await supabase
+            .from('users')
+            .update({ terms_accepted_at: new Date().toISOString() })
+            .eq('phone_number', canonical);
+          userStates.delete(senderNumber);
+          console.log(`✅ T&C accepted by ${canonical}`);
+          twiml.message('✅ Thank you for accepting our Terms & Conditions! How can I help you today?');
+        } catch (err) {
+          console.error('❌ Error saving T&C acceptance:', err);
+          twiml.message('✅ Thanks! How can I help you today?');
+        }
+      } else {
+        userStates.set(senderNumber, 'AWAITING_TC_ACCEPTANCE');
+        twiml.message(TC_MESSAGE);
+      }
+
+      res.type('text/xml').send(twiml.toString());
+      return;
+    }
 
     // 0. Handle Thread Management (CRITICAL FIX)
     if (normalizedMsg === '!clear' || normalizedMsg === '!reset') {
