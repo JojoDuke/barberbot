@@ -73,7 +73,8 @@ When customer first messages:
 1. If no category picked, list available categories (TRANSLATED).
 2. Once category selected, use 'getAllBusinessesServices' to show businesses.
 3. The response includes a 'platform' field for each business. *Store this platform value immediately* — you will need it for all next steps.
-4. Show businesses with 📍 Address, 🌐 Website, and 📸 Instagram. 
+4. Show businesses with 📍 Address, 💰 Price range, 🌐 Website, and 📸 Instagram.
+   - For price range: if `priceRange` is present, show "💰 Od X do Y CZK" (Czech) / "💰 From X to Y CZK" (English). If min equals max, show "💰 X CZK". Omit if unavailable.
    - **CRITICAL**: You MUST show the FULL Website URL and FULL Instagram URL (e.g., https://instagram.com/handle) for every business. NEVER omit these if they are present in the data.
 5. Ask: "Které [kategorie] si přejete rezervovat?" (or English equivalent).
 

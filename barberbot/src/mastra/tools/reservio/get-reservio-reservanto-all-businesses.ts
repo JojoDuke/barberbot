@@ -10,6 +10,12 @@ const formatInstagramUrl = (ig?: string) => {
   return `https://instagram.com/${ig.replace(/^@/, '')}`;
 };
 
+const computePriceRange = (services: { cost: number }[]) => {
+  const costs = services.map((s) => s.cost).filter((c) => c > 0);
+  if (costs.length === 0) return undefined;
+  return { min: Math.min(...costs), max: Math.max(...costs) };
+};
+
 export const getAllBusinessesServicesTool = createTool({
   id: 'get-all-businesses-services',
   description: 'Get all businesses in a category with their services. Use this when user asks about barbershops, physiotherapy, or cosmetics in general.',
@@ -35,6 +41,10 @@ export const getAllBusinessesServicesTool = createTool({
             cost: z.number(),
           })
         ),
+        priceRange: z.object({
+          min: z.number(),
+          max: z.number(),
+        }).optional(),
       })
     ),
   }),
@@ -86,6 +96,7 @@ export const getAllBusinessesServicesTool = createTool({
               instagram: formatInstagramUrl(business.instagram),
               googleRating: business.googleRating,
               services,
+              priceRange: computePriceRange(services),
             };
           } else {
             // Reservio
@@ -120,6 +131,7 @@ export const getAllBusinessesServicesTool = createTool({
               instagram: formatInstagramUrl(business.instagram),
               googleRating: business.googleRating,
               services,
+              priceRange: computePriceRange(services),
             };
           }
         } catch (error) {
@@ -133,6 +145,7 @@ export const getAllBusinessesServicesTool = createTool({
               instagram: formatInstagramUrl(business.instagram),
               googleRating: business.googleRating,
               services: [],
+              priceRange: undefined,
             };
         }
       })
