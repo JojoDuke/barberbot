@@ -24,15 +24,45 @@ const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TO
 // User states for command triggers
 const userStates = new Map<string, 'AWAITING_BROADCAST_CONFIRM' | 'AWAITING_TC_ACCEPTANCE'>();
 
+// Detected language per user (persisted for the T&C gate before the AI is involved)
+const userLanguages = new Map<string, 'cs' | 'en'>();
+
 // WhatsApp message length limit (Twilio recommends staying under 1600)
 const WHATSAPP_MESSAGE_LIMIT = 1600;
 
-// Terms & Conditions acceptance gate message
-const TC_MESSAGE =
-  'Welcome! 👋\n\n' +
-  'Before using this booking service, please read and accept our Terms & Conditions.\n\n' +
-  'By continuing you agree to our terms of service and consent to receiving booking-related messages via WhatsApp.\n\n' +
-  'Reply *Yes* to accept and get started.';
+// Detect Czech vs English from a raw message.
+// Uses Czech-specific diacritics and common Czech words/greetings as signal.
+function detectLanguage(msg: string): 'cs' | 'en' {
+  const lower = msg.toLowerCase().trim();
+  const czechDiacritics = /[áčďéěíňóřšťúůýž]/;
+  const czechWords = /\b(ahoj|cau|čau|nazdar|dobrý|dobry|den|zdravím|zdravim|jak|kde|chci|prosím|prosim|děkuji|dekuji|díky|diky|ano|ne|potřebuji|potrebuji|rezervace|objednat|objednání|služby|sluzby|hodina|hodiny|termín|termin)\b/;
+  if (czechDiacritics.test(lower) || czechWords.test(lower)) return 'cs';
+  return 'en';
+}
+
+// Terms & Conditions messages per language
+const TC_MESSAGES: Record<'cs' | 'en', string> = {
+  en:
+    'Welcome! 👋\n\n' +
+    'Before using this booking service, please read and accept our Terms & Conditions.\n\n' +
+    'By continuing you agree to our terms of service and consent to receiving booking-related messages via WhatsApp.\n\n' +
+    'Reply *Yes* to accept and get started.',
+  cs:
+    'Vítejte! 👋\n\n' +
+    'Před použitím této rezervační služby si prosím přečtěte a přijměte naše Obchodní podmínky.\n\n' +
+    'Pokračováním souhlasíte s našimi podmínkami služby a dáváte souhlas k přijímání zpráv souvisejících s rezervacemi přes WhatsApp.\n\n' +
+    'Odpovězte *Ano* pro přijetí a začněte.',
+};
+
+const TC_ACCEPTED_MESSAGES: Record<'cs' | 'en', string> = {
+  en: '✅ Thank you for accepting our Terms & Conditions! How can I help you today?',
+  cs: '✅ Děkujeme za přijetí našich Obchodních podmínek! Jak vám mohu dnes pomoci?',
+};
+
+const TC_ACCEPTED_FALLBACK_MESSAGES: Record<'cs' | 'en', string> = {
+  en: '✅ Thanks! How can I help you today?',
+  cs: '✅ Děkujeme! Jak vám mohu dnes pomoci?',
+};
 
 // Host URL for serving images (defaults to ngrok/tunnel URL if available, else localhost)
 // You should set BASE_URL in .env to your ngrok URL (e.g. https://xxxx.ngrok.io)
@@ -245,6 +275,15 @@ app.post('/whatsapp', async (req, res) => {
     const isAwaitingTC = userStates.get(senderNumber) === 'AWAITING_TC_ACCEPTANCE';
 
     if (!hasAcceptedTC || isAwaitingTC) {
+      // Detect (or refresh) language from every message in the T&C flow
+      const detectedLang = detectLanguage(incomingMessage);
+      if (!userLanguages.has(senderNumber) || detectedLang !== 'en') {
+        // Prefer any explicit signal over the default; only overwrite the
+        // stored 'en' default when we get a clear Czech signal.
+        userLanguages.set(senderNumber, detectedLang);
+      }
+      const lang = userLanguages.get(senderNumber) ?? 'en';
+
       const acceptanceWords = ['yes', 'ano', 'ok', 'accept', 'souhlasím', 'souhlasim', 'agree', '1'];
       const userAccepted = acceptanceWords.some(w => normalizedMsg === w || normalizedMsg.startsWith(w + ' '));
 
@@ -255,15 +294,16 @@ app.post('/whatsapp', async (req, res) => {
             .update({ terms_accepted_at: new Date().toISOString() })
             .eq('phone_number', canonical);
           userStates.delete(senderNumber);
+          userLanguages.delete(senderNumber);
           console.log(`✅ T&C accepted by ${canonical}`);
-          twiml.message('✅ Thank you for accepting our Terms & Conditions! How can I help you today?');
+          twiml.message(TC_ACCEPTED_MESSAGES[lang]);
         } catch (err) {
           console.error('❌ Error saving T&C acceptance:', err);
-          twiml.message('✅ Thanks! How can I help you today?');
+          twiml.message(TC_ACCEPTED_FALLBACK_MESSAGES[lang]);
         }
       } else {
         userStates.set(senderNumber, 'AWAITING_TC_ACCEPTANCE');
-        twiml.message(TC_MESSAGE);
+        twiml.message(TC_MESSAGES[lang]);
       }
 
       res.type('text/xml').send(twiml.toString());
