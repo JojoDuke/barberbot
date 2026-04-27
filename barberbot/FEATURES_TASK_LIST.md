@@ -3,8 +3,8 @@
 Tick `- [x]` when an item is **done / shipped** (or paid). Prices are from the quote UI.
 
 - [x] **Preset first message** — $30
-- [ ] **Match language & translate all result fields** — $110
-- [ ] **Business list shows price range** — $80
+- [x] **Match language & translate all result fields** — $110
+- [x] **Business list shows price range** — $80
 - [x] **Save booking details + "same as last time?"** — $120
 - [ ] **Skip ahead / smart routing** (e.g. "Barber XY Friday") — $200
 - [ ] **Filter by max price + location** — $200
