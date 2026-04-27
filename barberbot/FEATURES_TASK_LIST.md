@@ -6,8 +6,8 @@ Tick `- [x]` when an item is **done / shipped** (or paid). Prices are from the q
 - [x] **Match language & translate all result fields** — $110
 - [x] **Business list shows price range** — $80
 - [x] **Save booking details + "same as last time?"** — $120
-- [ ] **Skip ahead / smart routing** (e.g. "Barber XY Friday") — $200
-- [ ] **Filter by max price + location** — $200
-- [ ] **Store user params for later marketing** — $100
+- [x] **Skip ahead / smart routing** (e.g. "Barber XY Friday") — $200
+- [x] **Filter by max price + location** — $200
+- [x] **Store user params for later marketing** — $100
 
 **Quote snapshot:** Only *Save booking details + "same as last time?"* was selected on the original picker (**$120**). Update checkboxes here as you deliver more.

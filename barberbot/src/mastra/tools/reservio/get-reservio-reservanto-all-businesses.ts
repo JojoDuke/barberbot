@@ -22,6 +22,8 @@ export const getAllBusinessesServicesTool = createTool({
   inputSchema: z.object({
     category: z.string().describe('The business category (e.g. barbershop, massage, etc.)'),
     minRating: z.number().nullish().describe('Minimum Google rating to filter businesses'),
+    minPrice: z.number().nullish().describe('Minimum service price in CZK. Only include businesses that have at least one service at or above this price.'),
+    maxPrice: z.number().nullish().describe('Maximum service price in CZK. Only include businesses that have at least one service at or below this price.'),
   }),
   outputSchema: z.object({
     businesses: z.array(
@@ -151,7 +153,24 @@ export const getAllBusinessesServicesTool = createTool({
       })
     );
 
-    return { businesses: businessesWithServices };
+    const { minPrice, maxPrice } = context;
+    const filtered = businessesWithServices
+      .map((business) => {
+        if (minPrice == null && maxPrice == null) return business;
+        const matchingServices = business.services.filter((s) => {
+          if (s.cost <= 0) return false;
+          if (minPrice != null && s.cost < minPrice) return false;
+          if (maxPrice != null && s.cost > maxPrice) return false;
+          return true;
+        });
+        return { ...business, services: matchingServices, priceRange: computePriceRange(matchingServices) };
+      })
+      .filter((business) => {
+        if (minPrice == null && maxPrice == null) return true;
+        return business.services.length > 0;
+      });
+
+    return { businesses: filtered };
   },
 });
 

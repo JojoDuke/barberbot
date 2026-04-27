@@ -14,6 +14,7 @@ import { getReservantoResourcesTool } from '../tools/reservanto/get-reservanto-r
 import { listCategoriesTool } from '../tools/reservio/list-reservio-reservanto-categories';
 import { getBusinessesByCategory, getDefaultBusiness } from '../../config/businesses';
 import { getSavedUserDetailsTool } from '../tools/get-saved-user-details';
+import { saveUserProfileTool } from '../tools/save-user-profile';
 
 export const bridgetAgent = new Agent({
   name: 'Bridget',
@@ -60,6 +61,23 @@ NEVER guess, invent, or derive a serviceId or resourceId. These are internal IDs
 - Conversation memory (thread) is also per phone number, not per business.
 - When finalizing **any** booking, call 'getSavedUserDetails' with the user's WhatsApp phone (canonical form). Offer reuse of saved details regardless of which business they booked last time.
 
+## USER PROFILE TRACKING:
+Call 'saveUserProfile' with the user's WhatsApp phone number at the following moments (fire-and-forget — do NOT wait for or mention the result to the user):
+
+1. *When a category is browsed* (after calling 'getAllBusinessesServices'):
+   - Pass: categoriesBrowsed: [the category name in English, lowercase, e.g. "barbershop"]
+
+2. *When the user expresses clear service intent* (e.g. "I want a haircut", "looking for a massage"):
+   - Pass: servicesLookingFor: [the service(s) they mentioned, in English, lowercase]
+
+3. *At booking confirmation* (after a booking is successfully created):
+   - Pass: servicesBooked: [the booked service name, in English if possible]
+   - Pass: genderEstimate and genderConfidence — estimate from the user's first name and/or the service type:
+     - Male names (Tomáš, Jan, David, etc.) or male services (beard trim, men's haircut) → "male", confidence "high"
+     - Female names (Jana, Marie, etc.) or female services (ladies cut, manicure, lash extensions) → "female", confidence "high"
+     - Ambiguous name + gender-neutral service → "unknown", confidence "low"
+     - If you already estimated gender earlier in the conversation with high confidence, skip re-estimating.
+
 ## BOOKING FLOW:
 
 ### Step 1: GREETING & INTENT DETECTION
@@ -72,11 +90,21 @@ When customer first messages:
 ### Step 2A: CATEGORY & BUSINESS SELECTION
 1. If no category picked, list available categories (TRANSLATED).
 2. Once category selected, use 'getAllBusinessesServices' to show businesses.
+   - *Price intent extraction:* Before calling the tool, check if the user expressed a price preference anywhere in the conversation. Extract \`minPrice\` and/or \`maxPrice\` in CZK:
+     - "under 500", "up to 500", "max 500", "do 500", "za méně než 500" → maxPrice: 500
+     - "over 300", "at least 300", "od 300" → minPrice: 300
+     - "between 300 and 600", "300–600 CZK" → minPrice: 300, maxPrice: 600
+     - "around 500" → minPrice: 400, maxPrice: 600 (±20% window)
+     - "cheap" / "levně" → maxPrice: 400 (reasonable low-end estimate)
+     - "expensive" / "premium" → minPrice: 800
+     - If the user states a price in a non-CZK currency (EUR, USD, GBP, etc.), convert to CZK using approximate rates (1 EUR ≈ 25 CZK, 1 USD ≈ 23 CZK, 1 GBP ≈ 29 CZK) before passing to the tool.
+     - If no price preference is expressed, omit both parameters.
 3. The response includes a 'platform' field for each business. *Store this platform value immediately* — you will need it for all next steps.
 4. Show businesses with 📍 Address, 💰 Price range, 🌐 Website, and 📸 Instagram.
    - For price range: if \`priceRange\` is present, show "💰 Od X do Y CZK" (Czech) / "💰 From X to Y CZK" (English). If min equals max, show "💰 X CZK". Omit if unavailable.
    - **CRITICAL**: You MUST show the FULL Website URL and FULL Instagram URL (e.g., https://instagram.com/handle) for every business. NEVER omit these if they are present in the data.
-5. Ask: "Které [kategorie] si přejete rezervovat?" (or English equivalent).
+5. If price filters were applied and results are empty, inform the user no businesses match their budget and suggest they broaden the range.
+6. Ask: "Které [kategorie] si přejete rezervovat?" (or English equivalent).
 
 ### Step 2B: SERVICE SELECTION
 1. After business selected, check its platform:
@@ -131,6 +159,7 @@ When customer first messages:
     getReservantoResources: getReservantoResourcesTool,
     listCategories: listCategoriesTool,
     getSavedUserDetails: getSavedUserDetailsTool,
+    saveUserProfile: saveUserProfileTool,
   },
   memory: new Memory({
     storage: sharedStorage,
