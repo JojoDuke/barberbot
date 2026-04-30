@@ -140,7 +140,6 @@ async function sendTypingIndicator(messageSid: string): Promise<void> {
         }
       }
     );
-    console.log('💬 Typing indicator sent');
   } catch (error: any) {
     if (error.response) {
       console.warn('⚠️ Failed to send typing indicator:', error.response.status, JSON.stringify(error.response.data));
@@ -489,10 +488,7 @@ app.post('/whatsapp', async (req, res) => {
         }
       }
 
-      console.log(`🤖 Bot response (length: ${fullResponse.length}):`);
-      console.log('───────────────────────────────────────');
-      console.log(fullResponse);
-      console.log('───────────────────────────────────────');
+      console.log(`🤖 Bot response (${fullResponse.length} chars)`);
 
       // Check if response is empty
       if (!fullResponse || fullResponse.trim().length === 0) {
@@ -502,10 +498,6 @@ app.post('/whatsapp', async (req, res) => {
 
       // Sanitize the response for WhatsApp
       const sanitizedResponse = sanitizeWhatsAppMessage(fullResponse);
-      console.log(`✨ Sanitized response (length: ${sanitizedResponse.length}):`);
-      console.log('───────────────────────────────────────');
-      console.log(sanitizedResponse);
-      console.log('───────────────────────────────────────');
 
       // Validate before sending
       if (!sanitizedResponse || sanitizedResponse.trim().length === 0) {
@@ -556,14 +548,12 @@ app.post('/whatsapp', async (req, res) => {
               }
             }
 
-            console.log(`📤 Sending split message ${i + 1}/${splitMatches.length} via REST API...`);
             await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedBlock, finalImageUrl);
 
             // Delay between messages
             // If it's the second to last message, add a longer delay for the final question
             if (i < splitMatches.length - 1) {
               const delay = i === splitMatches.length - 2 ? 4000 : 2500;
-              console.log(`- Waiting ${delay}ms before next message...`);
               await sleep(delay);
             }
           }
@@ -599,11 +589,8 @@ app.post('/whatsapp', async (req, res) => {
     } finally {
       // ALWAYS stop the typing indicator and unlock the thread
       stopTyping();
-      console.log(`🔓 Releasing thread for ${senderNumber}`);
       processingThreads.delete(senderNumber);
     }
-
-    console.log('✅ TwiML response prepared successfully');
   } catch (outerError: any) {
     logger.error('❌ WhatsApp Webhook CRASH:', {
       error: outerError.message,
@@ -615,40 +602,19 @@ app.post('/whatsapp', async (req, res) => {
 
   // Set proper headers and send response
   res.type('text/xml');
-  const twimlString = twiml.toString();
-  console.log('📤 Sending TwiML response:');
-  console.log(twimlString);
-  res.send(twimlString);
+  res.send(twiml.toString());
 });
 
 // Status callback endpoint to track message delivery
 app.post('/whatsapp/status', (req, res) => {
-  console.log(`📊 Message Status Callback Received`);
-  console.log('───────────────────────────────────────');
-  console.log('Full callback data:');
-  console.log(JSON.stringify(req.body, null, 2));
-  console.log('───────────────────────────────────────');
-
-  // Extract common Twilio status fields
   const messageSid = req.body.MessageSid || req.body.SmsSid;
   const messageStatus = req.body.MessageStatus || req.body.SmsStatus;
   const errorCode = req.body.ErrorCode;
   const errorMessage = req.body.ErrorMessage;
-  const from = req.body.From;
-  const to = req.body.To;
   const channelStatus = req.body.ChannelToStatus;
 
-  console.log(`\n📊 Parsed Status:`);
-  console.log(`   SID: ${messageSid}`);
-  console.log(`   Status: ${messageStatus || channelStatus || 'unknown'}`);
-  console.log(`   From: ${from}`);
-  console.log(`   To: ${to}`);
-
   if (errorCode) {
-    console.error(`   ❌ Error Code: ${errorCode}`);
-    console.error(`   ❌ Error Message: ${errorMessage}`);
-  } else {
-    console.log(`   ✅ No errors`);
+    console.error(`❌ Message ${messageSid} status error — ${errorCode}: ${errorMessage}`);
   }
 
   res.sendStatus(200);
