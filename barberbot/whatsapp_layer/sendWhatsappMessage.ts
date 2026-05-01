@@ -200,6 +200,15 @@ async function sendWhatsAppMessageRest(to: string, from: string, body: string, m
 // Track active threads to prevent parallel processing for the same user
 const processingThreads = new Set<string>();
 
+// Cache of saved names per WhatsApp sender, populated from Supabase on first lookup.
+// Used to enrich logs (e.g. "[whatsapp:+...(Duke)] → ..."). Cleared on server restart.
+const userNames = new Map<string, string>();
+
+function formatSender(senderNumber: string): string {
+  const name = userNames.get(senderNumber);
+  return name ? `${senderNumber}(${name})` : senderNumber;
+}
+
 app.post('/whatsapp', async (req, res) => {
   const twiml = new MessagingResponse();
 
@@ -209,7 +218,7 @@ app.post('/whatsapp', async (req, res) => {
     const senderNumber = req.body.From || '';
     const messageSid = req.body.MessageSid || '';
 
-    console.log(`📱 [${senderNumber}] → ${incomingMessage}`);
+    console.log(`📱 [${formatSender(senderNumber)}] → ${incomingMessage}`);
 
     // Thread locking to prevent duplicate tool ID crashes.
     // IMPORTANT: acquire the lock immediately (before any awaits) to close the race window
@@ -231,7 +240,7 @@ app.post('/whatsapp', async (req, res) => {
     try {
       let { data: userRow, error: userError } = await supabase
         .from('users')
-        .select('phone_number, terms_accepted_at')
+        .select('phone_number, name, terms_accepted_at')
         .eq('phone_number', canonical)
         .maybeSingle();
 
@@ -244,7 +253,7 @@ app.post('/whatsapp', async (req, res) => {
         if (!userRow && legacy !== canonical) {
           const second = await supabase
             .from('users')
-            .select('phone_number, terms_accepted_at')
+            .select('phone_number, name, terms_accepted_at')
             .eq('phone_number', legacy)
             .maybeSingle();
           userRow = second.data;
@@ -261,6 +270,7 @@ app.post('/whatsapp', async (req, res) => {
           hasAcceptedTC = false; // brand-new user hasn't accepted yet
         } else {
           hasAcceptedTC = userRow.terms_accepted_at != null;
+          if (userRow.name) userNames.set(senderNumber, userRow.name);
         }
       }
     } catch (err) {
@@ -492,7 +502,7 @@ app.post('/whatsapp', async (req, res) => {
         }
       }
 
-      console.log(`🤖 [Bridget] → ${fullResponse}`);
+      console.log(`🤖 [Bridget → ${formatSender(senderNumber)}] ${fullResponse}`);
 
       // Check if response is empty
       if (!fullResponse || fullResponse.trim().length === 0) {
