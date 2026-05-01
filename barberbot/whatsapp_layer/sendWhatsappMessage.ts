@@ -218,8 +218,6 @@ app.post('/whatsapp', async (req, res) => {
     const senderNumber = req.body.From || '';
     const messageSid = req.body.MessageSid || '';
 
-    console.log(`📱 [${formatSender(senderNumber)}] → ${incomingMessage}`);
-
     // Thread locking to prevent duplicate tool ID crashes.
     // IMPORTANT: acquire the lock immediately (before any awaits) to close the race window
     // where two concurrent webhook calls could both pass the check before either sets it.
@@ -277,6 +275,9 @@ app.post('/whatsapp', async (req, res) => {
       console.error('❌ Error during user sync / T&C check:', err);
       hasAcceptedTC = true; // fail-open on unexpected errors
     }
+
+    // Log after the DB lookup so the name is available in the cache
+    console.log(`📱 [${formatSender(senderNumber)}] → ${incomingMessage}`);
 
     // -1. Terms & Conditions gate — must be accepted before anything else
     const isAwaitingTC = userStates.get(senderNumber) === 'AWAITING_TC_ACCEPTANCE';
@@ -502,7 +503,7 @@ app.post('/whatsapp', async (req, res) => {
         }
       }
 
-      console.log(`🤖 [Bridget → ${formatSender(senderNumber)}] ${fullResponse}`);
+      console.log(`🤖 [Bridget] → ${fullResponse}`);
 
       // Check if response is empty
       if (!fullResponse || fullResponse.trim().length === 0) {
