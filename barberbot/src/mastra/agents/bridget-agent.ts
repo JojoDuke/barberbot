@@ -154,7 +154,7 @@ When customer first messages:
    - Reservanto → use 'createReservantoBooking' (pass segmentType and appointmentId if available)
 4. Success message: ✅ *Rezervace potvrzena!* (or English equivalent).
 `,
-  model: 'openai/gpt-5.2-chat-latest',
+  model: 'openai/gpt-5.5',
   tools: {
     getReservioBusinessInfo: getBusinessInfoTool,
     getReservioServices: getServicesTool,
