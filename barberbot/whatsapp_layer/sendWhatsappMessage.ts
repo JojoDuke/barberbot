@@ -214,14 +214,15 @@ app.post('/whatsapp', async (req, res) => {
     console.log(`   SID: ${messageSid}`);
     console.log(`   Body: ${incomingMessage}`);
 
-    // Thread locking to prevent duplicate tool ID crashes
+    // Thread locking to prevent duplicate tool ID crashes.
+    // IMPORTANT: acquire the lock immediately (before any awaits) to close the race window
+    // where two concurrent webhook calls could both pass the check before either sets it.
     if (processingThreads.has(senderNumber)) {
       console.warn(`⚠️  Thread ${senderNumber} is already being processed. Ignoring overlapping message.`);
-      // Optional: Respond that we're still thinking, but for WhatsApp UX it's usually better to just ignore or wait.
-      // We respond with empty TwiML to acknowledge receipt to Twilio without sending a message to user.
       res.type('text/xml').send(new MessagingResponse().toString());
       return;
     }
+    processingThreads.add(senderNumber);
 
     const normalizedMsg = incomingMessage.trim().toLowerCase();
 
@@ -305,6 +306,7 @@ app.post('/whatsapp', async (req, res) => {
         twiml.message(TC_MESSAGES[lang]);
       }
 
+      processingThreads.delete(senderNumber);
       res.type('text/xml').send(twiml.toString());
       return;
     }
@@ -315,6 +317,7 @@ app.post('/whatsapp', async (req, res) => {
       const threadId = `booking-${senderNumber.replace(/[^0-9]/g, '')}`;
       await (mastra.storage as any)?.deleteThread({ threadId });
       twiml.message('✅ Your conversation history has been cleared. You can start a new booking now.');
+      processingThreads.delete(senderNumber);
       res.type('text/xml').send(twiml.toString());
       return;
     }
@@ -333,6 +336,7 @@ app.post('/whatsapp', async (req, res) => {
           if (error || !users || users.length === 0) {
             console.error('❌ Failed to fetch users from table:', error);
             twiml.message('❌ Broadcast failed: No users found in database.');
+            processingThreads.delete(senderNumber);
             res.type('text/xml').send(twiml.toString());
             return;
           }
@@ -355,7 +359,6 @@ app.post('/whatsapp', async (req, res) => {
                 "📣 This is a test broadcast from BarberBot!"
               );
               successCount++;
-              // Small delay between messages to be safe with rate limits
               await sleep(100);
             } catch (sendErr) {
               console.error(`❌ Failed to send to ${targetNumber}:`, sendErr);
@@ -363,11 +366,13 @@ app.post('/whatsapp', async (req, res) => {
           }
 
           twiml.message(`✅ Broadcast complete! Sent to ${successCount}/${users.length} users.`);
+          processingThreads.delete(senderNumber);
           res.type('text/xml').send(twiml.toString());
           return;
         } catch (err) {
           console.error('❌ Broadcast failed:', err);
           twiml.message('❌ Failed to send broadcast message.');
+          processingThreads.delete(senderNumber);
           res.type('text/xml').send(twiml.toString());
           return;
         }
@@ -375,6 +380,7 @@ app.post('/whatsapp', async (req, res) => {
         // Any other word cancels the broadcast mode
         userStates.delete(senderNumber);
         twiml.message('⚠️ Broadcast cancelled.');
+        processingThreads.delete(senderNumber);
         res.type('text/xml').send(twiml.toString());
         return;
       }
@@ -384,9 +390,8 @@ app.post('/whatsapp', async (req, res) => {
     if (normalizedMsg === '!x74') {
       console.log('🎯 Command Triggered: !x74');
       userStates.set(senderNumber, 'AWAITING_BROADCAST_CONFIRM');
-
-      // Sending simple text prompt as buttons didn't appear
       twiml.message('Send Broadcast?\n\nReply *Yes* to confirm or *No* to cancel.');
+      processingThreads.delete(senderNumber);
       res.type('text/xml').send(twiml.toString());
       return;
     }
@@ -395,6 +400,7 @@ app.post('/whatsapp', async (req, res) => {
     if (!incomingMessage.trim()) {
       console.warn('⚠️  Empty message received');
       twiml.message('Hi! Please send a message to get started.');
+      processingThreads.delete(senderNumber);
       res.type('text/xml').send(twiml.toString());
       return;
     }
@@ -402,8 +408,9 @@ app.post('/whatsapp', async (req, res) => {
     // Start persistent typing indicator
     const stopTyping = startTypingIndicator(messageSid);
 
-    // Register this thread as being processed
-    processingThreads.add(senderNumber);
+    // Acknowledge the webhook immediately so Twilio doesn't time out (15s limit) and retry.
+    // The actual response is sent asynchronously via REST API below.
+    res.type('text/xml').send(new MessagingResponse().toString());
 
     try {
       // Get Bridget, the booking agent
@@ -562,30 +569,22 @@ app.post('/whatsapp', async (req, res) => {
         // We respond with empty TwiML since we sent everything via REST API
         console.log('✅ All split messages queued via REST API');
       } else {
-        // Single message mode (original behavior)
-        const message = twiml.message('');
-        message.body(sanitizedResponse);
-
-        // Extract image URL if present in original response
+        // Single message — send via REST API (webhook already acknowledged above)
         const imageMatch = fullResponse.match(/\[IMAGE:\s*(.*?)\]/);
+        let imageUrl: string | undefined;
         if (imageMatch && imageMatch[1]) {
-          let imageUrl = imageMatch[1].trim();
-
-          // If it's a relative path, assume simple local serving (though we are moving to external now)
+          imageUrl = imageMatch[1].trim();
           if (imageUrl.startsWith('/')) {
             imageUrl = `${BASE_URL.replace(/\/$/, '')}/${imageUrl.replace(/^\//, '')}`;
           }
-
           console.log(`🖼️  Attaching image: ${imageUrl}`);
-          message.media(imageUrl);
         }
+        await sendWhatsAppMessageRest(senderNumber, req.body.To, sanitizedResponse, imageUrl);
       }
     } catch (error) {
       console.error('❌ Error processing message:');
       console.error(error);
-
-      const errorMessage = 'Sorry, I encountered an error. Please try again in a moment.';
-      twiml.message(errorMessage);
+      await sendWhatsAppMessageRest(senderNumber, req.body.To, 'Sorry, I encountered an error. Please try again in a moment.');
     } finally {
       // ALWAYS stop the typing indicator and unlock the thread
       stopTyping();
@@ -597,12 +596,12 @@ app.post('/whatsapp', async (req, res) => {
       stack: outerError.stack,
       sender: req.body.From
     });
-    twiml.message('Sorry, something went wrong on our end.');
+    // res may not have been sent yet if the crash happened before the early ack
+    if (!res.headersSent) {
+      res.type('text/xml').send(new MessagingResponse().toString());
+    }
+    await sendWhatsAppMessageRest(req.body.From, req.body.To, 'Sorry, something went wrong on our end.');
   }
-
-  // Set proper headers and send response
-  res.type('text/xml');
-  res.send(twiml.toString());
 });
 
 // Status callback endpoint to track message delivery
