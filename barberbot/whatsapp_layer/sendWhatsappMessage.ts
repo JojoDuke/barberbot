@@ -209,10 +209,7 @@ app.post('/whatsapp', async (req, res) => {
     const senderNumber = req.body.From || '';
     const messageSid = req.body.MessageSid || '';
 
-    console.log(`📱 Incoming WhatsApp Message:`);
-    console.log(`   From: ${senderNumber}`);
-    console.log(`   SID: ${messageSid}`);
-    console.log(`   Body: ${incomingMessage}`);
+    console.log(`📱 [${senderNumber}] → ${incomingMessage}`);
 
     // Thread locking to prevent duplicate tool ID crashes.
     // IMPORTANT: acquire the lock immediately (before any awaits) to close the race window
@@ -495,7 +492,7 @@ app.post('/whatsapp', async (req, res) => {
         }
       }
 
-      console.log(`🤖 Bot response (${fullResponse.length} chars)`);
+      console.log(`🤖 [Bridget] → ${fullResponse}`);
 
       // Check if response is empty
       if (!fullResponse || fullResponse.trim().length === 0) {
