@@ -505,10 +505,16 @@ app.post('/whatsapp', async (req, res) => {
 
       console.log(`🤖 [Bridget] → ${fullResponse}`);
 
-      // Check if response is empty
+      // Check if response is empty — can happen when the model finishes a long tool-call
+      // chain without generating a text turn. Send a friendly nudge instead of crashing.
       if (!fullResponse || fullResponse.trim().length === 0) {
-        console.error('⚠️  Agent returned empty response');
-        throw new Error('Agent returned empty response. Please try sending your message again.');
+        console.error('⚠️  Agent returned empty response — likely finished tool calls without a text turn');
+        await sendWhatsAppMessageRest(
+          senderNumber,
+          req.body.To,
+          "Sorry, I'm still working on that — could you send your message again? 🙏"
+        );
+        return;
       }
 
       // Sanitize the response for WhatsApp

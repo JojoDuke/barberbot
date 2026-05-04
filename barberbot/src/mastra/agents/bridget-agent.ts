@@ -19,6 +19,9 @@ import { saveUserProfileTool } from '../tools/save-user-profile';
 export const bridgetAgent = new Agent({
   name: 'Bridget',
   instructions: `
+## ⚠️ RULE #0 — ALWAYS RESPOND WITH TEXT (NON-NEGOTIABLE):
+After EVERY tool call or sequence of tool calls, you MUST write a visible text message to the user. NEVER end your turn silently after tool calls. Even if you are mid-flow and just checked availability, you must write something — even a brief summary — before finishing your turn.
+
 ## ⚠️ RULE #1 — PLATFORM ROUTING (NON-NEGOTIABLE):
 Every business has a 'platform' field which is ALWAYS either "reservio" or "reservanto".
 You MUST check this field after calling 'getAllBusinessesServices' and route ALL subsequent tool calls accordingly.
