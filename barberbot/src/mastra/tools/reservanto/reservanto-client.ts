@@ -448,6 +448,38 @@ export class ReservantoClient {
         });
 
         if (matchedCustomer) {
+            // Reservanto matches existing customers by phone OR email — but the booker may
+            // have given a different name (e.g. booking on behalf of someone else, or the
+            // existing record is stale/wrong). Detect a name mismatch and overwrite the
+            // stored Reservanto name so the booking shows the booker's intended details.
+            const incomingFullName = `${params.firstName} ${params.lastName}`.trim().toLowerCase();
+            const existingFullName = (matchedCustomer.Name || `${matchedCustomer.FirstName ?? ''} ${matchedCustomer.LastName ?? ''}`).trim().toLowerCase();
+
+            const nameDiffers = !!incomingFullName && incomingFullName !== existingFullName;
+            const emailDiffers =
+                !!params.email && (matchedCustomer.Email ?? '').toLowerCase() !== params.email.toLowerCase();
+            const phoneDiffers =
+                !!params.phone && (matchedCustomer.Phone ?? '').replace(/\s+/g, '') !== params.phone.replace(/\s+/g, '');
+
+            if (nameDiffers || emailDiffers || phoneDiffers) {
+                try {
+                    await this.post('/Customer/Edit', {
+                        CustomerId: matchedCustomer.Id,
+                        FirstName: params.firstName,
+                        LastName: params.lastName,
+                        Email: params.email ?? null,
+                        Phone: params.phone ?? null,
+                    });
+                    console.log(
+                        `🛠️  Updated Reservanto customer ${matchedCustomer.Id}: ` +
+                        `name "${existingFullName}" → "${incomingFullName}"`
+                    );
+                } catch (err) {
+                    console.error('❌ Failed to update Reservanto customer details:', err);
+                    // Non-fatal: still proceed with the booking using the existing customer
+                }
+            }
+
             return matchedCustomer.Id;
         }
 

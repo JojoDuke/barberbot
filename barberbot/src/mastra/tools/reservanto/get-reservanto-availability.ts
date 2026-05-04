@@ -88,7 +88,7 @@ CRITICAL RULES:
                                 const resourceId = parseInt(rId);
                                 (timestamps as number[]).forEach(t => {
                                     slots.push({
-                                        startTime: new Date(t * 1000).toISOString(),
+                                        startTime: formatPragueISO(t),
                                         resourceId
                                     });
                                 });
